@@ -140,7 +140,7 @@ export default function ReputationPage() {
   const maxDist = Math.max(...Object.values(stats?.distribution ?? {}), 1);
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

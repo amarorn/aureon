@@ -55,12 +55,19 @@ export default function NewReviewRequestPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (body: Record<string, string>) =>
-      fetch(`${API_URL}/reputation`, {
+    mutationFn: async (body: Record<string, string>) => {
+      const r = await fetch(`${API_URL}/reputation`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify(body),
-      }).then((r) => r.json()),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        const msg = Array.isArray(data?.message) ? data.message.join(". ") : data?.message;
+        throw new Error(msg || "Erro ao criar solicitação");
+      }
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reputation"] });
       queryClient.invalidateQueries({ queryKey: ["reputation-stats"] });
@@ -85,7 +92,7 @@ export default function NewReviewRequestPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto max-w-2xl space-y-8">
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <Button variant="ghost" size="icon-sm" asChild>
@@ -205,7 +212,9 @@ export default function NewReviewRequestPage() {
         </div>
 
         {mutation.isError && (
-          <p className="text-center text-sm text-destructive">Erro ao criar solicitação. Tente novamente.</p>
+          <p className="text-center text-sm text-destructive">
+            {mutation.error instanceof Error ? mutation.error.message : "Erro ao criar solicitação. Tente novamente."}
+          </p>
         )}
       </form>
     </div>
