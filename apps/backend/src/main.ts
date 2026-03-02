@@ -13,9 +13,14 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  const corsOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
+    : ['http://localhost:3000', 'https://aureon-rose.vercel.app'];
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:3000'],
+    origin: corsOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id'],
   });
   const port = process.env.PORT || 3001;
   await app.listen(port);
