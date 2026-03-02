@@ -27,10 +27,10 @@ export class EmailCampaign {
   @Column({ name: 'body_html', type: 'text' })
   bodyHtml: string;
 
-  @Column({ name: 'from_name', nullable: true })
+  @Column({ name: 'from_name', type: 'varchar', nullable: true })
   fromName: string | null;
 
-  @Column({ name: 'from_email', nullable: true })
+  @Column({ name: 'from_email', type: 'varchar', nullable: true })
   fromEmail: string | null;
 
   @Column({ type: 'varchar', default: 'draft' })

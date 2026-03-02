@@ -18,13 +18,13 @@ export class EmailCampaignRecipient {
   @Column({ name: 'campaign_id' })
   campaignId: string;
 
-  @Column({ name: 'contact_id', nullable: true })
+  @Column({ type: 'uuid', name: 'contact_id', nullable: true })
   contactId: string | null;
 
   @Column()
   email: string;
 
-  @Column({ name: 'contact_name', nullable: true })
+  @Column({ type: 'varchar', name: 'contact_name', nullable: true })
   contactName: string | null;
 
   @Column({ type: 'varchar', default: 'pending' })

@@ -12,9 +12,12 @@ import {
   Plug,
   CalendarDays,
   Mail,
+  Star,
+  FileCheck,
   LogOut,
   Sparkles,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -25,6 +28,8 @@ const navItems = [
   { href: "/app/inbox", label: "Inbox", icon: MessageSquare, exact: false },
   { href: "/app/telephony", label: "Telefonia", icon: Phone, exact: false },
   { href: "/app/email-marketing", label: "Email Marketing", icon: Mail, exact: false },
+  { href: "/app/reputation", label: "Reputação", icon: Star, exact: false },
+  { href: "/app/proposals", label: "Propostas", icon: FileCheck, exact: false },
   { href: "/app/automation", label: "Automação", icon: Zap, exact: false },
   { href: "/app/integrations", label: "Integrações", icon: Plug, exact: false },
 ];
@@ -84,7 +89,10 @@ export function AppSidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-white/[0.06] p-2 space-y-0.5">
+      <div className="border-t border-border p-2 space-y-0.5">
+        <div className="flex justify-center mb-2">
+          <ThemeToggle />
+        </div>
         {/* User info */}
         <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 mb-1">
           <div className="flex size-7 items-center justify-center rounded-full gradient-primary flex-shrink-0">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { ArrowRight, BarChart3, MessageSquare, Phone, Zap, Plug, Users, Sparkles } from "lucide-react";
 
 const modules = [
@@ -69,6 +70,7 @@ export default function Home() {
             <span className="text-base font-semibold tracking-tight">Aureon</span>
           </div>
           <nav className="flex items-center gap-2">
+            <ThemeToggle />
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Entrar</Link>
             </Button>

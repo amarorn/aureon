@@ -26,6 +26,13 @@ import { CallQueueItem } from '../telephony/entities/call-queue-item.entity';
 import { Workflow } from '../automation/entities/workflow.entity';
 import { WorkflowRun } from '../automation/entities/workflow-run.entity';
 import { Integration } from '../integrations/entities/integration.entity';
+import { Appointment } from '../calendar/entities/appointment.entity';
+import { EmailCampaign } from '../email-marketing/entities/email-campaign.entity';
+import { EmailCampaignRecipient } from '../email-marketing/entities/email-campaign-recipient.entity';
+import { EmailTemplate } from '../email-marketing/entities/email-template.entity';
+import { ReviewRequest } from '../reputation/entities/review-request.entity';
+import { Proposal } from '../proposals/entities/proposal.entity';
+import { ProposalItem } from '../proposals/entities/proposal-item.entity';
 
 const entities = [
   Tenant,
@@ -46,6 +53,13 @@ const entities = [
   Workflow,
   WorkflowRun,
   Integration,
+  Appointment,
+  EmailCampaign,
+  EmailCampaignRecipient,
+  EmailTemplate,
+  ReviewRequest,
+  Proposal,
+  ProposalItem,
 ];
 
 async function sync() {

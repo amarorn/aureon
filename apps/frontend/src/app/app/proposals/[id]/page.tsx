@@ -1,0 +1,266 @@
+"use client";
+
+import { use } from "react";
+import Link from "next/link";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiHeaders, API_URL } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft, Send, CheckCircle2, XCircle, Copy,
+  Trash2, User, Clock, FileText, Loader2,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+
+type ProposalStatus = "draft" | "sent" | "viewed" | "accepted" | "declined" | "expired";
+
+interface ProposalItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  sort: number;
+}
+
+interface Proposal {
+  id: string;
+  title: string;
+  status: ProposalStatus;
+  total: number;
+  notes: string | null;
+  validUntil: string | null;
+  sentAt: string | null;
+  viewedAt: string | null;
+  respondedAt: string | null;
+  createdAt: string;
+  contact: { id: string; name: string; email: string; phone?: string } | null;
+  items: ProposalItem[];
+}
+
+const STATUS_CONFIG: Record<ProposalStatus, { label: string; color: string }> = {
+  draft:    { label: "Rascunho",    color: "bg-muted text-muted-foreground border-border" },
+  sent:     { label: "Enviada",     color: "bg-blue-400/15 text-blue-400 border-blue-400/20" },
+  viewed:   { label: "Visualizada", color: "bg-amber-400/15 text-amber-400 border-amber-400/20" },
+  accepted: { label: "Aceita",      color: "bg-emerald-400/15 text-emerald-400 border-emerald-400/20" },
+  declined: { label: "Recusada",    color: "bg-destructive/15 text-destructive border-destructive/20" },
+  expired:  { label: "Expirada",    color: "bg-muted text-muted-foreground/50 border-border" },
+};
+
+function formatCurrency(v: number) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+}
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+export default function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+
+  const { data: proposal, isLoading } = useQuery<Proposal>({
+    queryKey: ["proposal", id],
+    queryFn: () =>
+      fetch(`${API_URL}/proposals/${id}`, { headers: apiHeaders }).then((r) =>
+        r.ok ? r.json() : null
+      ),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status: string) =>
+      fetch(`${API_URL}/proposals/${id}/status`, {
+        method: "PUT",
+        headers: apiHeaders,
+        body: JSON.stringify({ status }),
+      }).then((r) => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["proposal", id] }),
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/proposals/${id}/duplicate`, { method: "POST", headers: apiHeaders }).then((r) => r.json()),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      router.push(`/app/proposals/${data.id}`);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: apiHeaders }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      router.push("/app/proposals");
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!proposal) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+        <FileText className="size-10" />
+        <p>Proposta não encontrada</p>
+        <Button variant="outline" size="sm" asChild><Link href="/app/proposals">Voltar</Link></Button>
+      </div>
+    );
+  }
+
+  const { label, color } = STATUS_CONFIG[proposal.status];
+  const sortedItems = [...(proposal.items ?? [])].sort((a, b) => a.sort - b.sort);
+
+  return (
+    <div className="mx-auto max-w-3xl p-8 space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon-sm" asChild>
+            <Link href="/app/proposals"><ArrowLeft className="size-4" /></Link>
+          </Button>
+          <div>
+            <div className="flex flex-wrap items-center gap-2 mb-0.5">
+              <h1 className="text-xl font-bold text-foreground">{proposal.title}</h1>
+              <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium", color)}>
+                {label}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">Criada em {formatDate(proposal.createdAt)}</p>
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 shrink-0">
+          {proposal.status === "draft" && (
+            <Button size="sm" onClick={() => statusMutation.mutate("sent")} disabled={statusMutation.isPending}>
+              <Send className="size-3.5" />
+              Enviar
+            </Button>
+          )}
+          {(proposal.status === "sent" || proposal.status === "viewed") && (
+            <>
+              <Button size="sm" className="bg-emerald-600/80 hover:bg-emerald-600 text-white border-0"
+                onClick={() => statusMutation.mutate("accepted")} disabled={statusMutation.isPending}>
+                <CheckCircle2 className="size-3.5" />
+                Aceita
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => statusMutation.mutate("declined")} disabled={statusMutation.isPending}>
+                <XCircle className="size-3.5" />
+                Recusada
+              </Button>
+            </>
+          )}
+          <Button size="icon-sm" variant="outline" onClick={() => duplicateMutation.mutate()} title="Duplicar">
+            <Copy className="size-3.5" />
+          </Button>
+          <Button size="icon-sm" variant="destructive" onClick={() => { if (confirm("Excluir proposta?")) deleteMutation.mutate(); }} title="Excluir">
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      {(proposal.sentAt || proposal.viewedAt || proposal.respondedAt) && (
+        <div className="glass-card rounded-xl p-4">
+          <div className="flex flex-wrap gap-4">
+            {proposal.sentAt && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Send className="size-3 text-blue-400" />
+                Enviada em {formatDate(proposal.sentAt)}
+              </div>
+            )}
+            {proposal.viewedAt && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="size-3 text-amber-400" />
+                Visualizada em {formatDate(proposal.viewedAt)}
+              </div>
+            )}
+            {proposal.respondedAt && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {proposal.status === "accepted"
+                  ? <CheckCircle2 className="size-3 text-emerald-400" />
+                  : <XCircle className="size-3 text-destructive" />}
+                {proposal.status === "accepted" ? "Aceita" : "Recusada"} em {formatDate(proposal.respondedAt)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Contact + validity */}
+      <div className="glass-card rounded-xl p-5 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">Cliente</p>
+          {proposal.contact ? (
+            <Link href={`/app/contacts/${proposal.contact.id}`} className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors">
+              <div className="flex size-6 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
+                {proposal.contact.name[0].toUpperCase()}
+              </div>
+              {proposal.contact.name}
+            </Link>
+          ) : (
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground"><User className="size-3.5" /> Sem contato</span>
+          )}
+        </div>
+        {proposal.validUntil && (
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">Válida até</p>
+            <p className="flex items-center gap-1.5 text-sm text-foreground">
+              <Clock className="size-3.5 text-muted-foreground" />
+              {formatDate(proposal.validUntil)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Items table */}
+      <div className="glass-card rounded-xl overflow-hidden">
+        <div className="border-b border-white/[0.06] px-5 py-3">
+          <h2 className="text-sm font-semibold text-foreground">Itens da proposta</h2>
+        </div>
+
+        <div className="divide-y divide-white/[0.04]">
+          {/* Column headers */}
+          <div className="grid grid-cols-[1fr_60px_110px_100px] gap-2 px-5 py-2 bg-white/[0.02]">
+            {["Descrição", "Qtd", "Preço unit.", "Total"].map((h) => (
+              <p key={h} className="text-[11px] font-medium text-muted-foreground/40 uppercase tracking-wider last:text-right">{h}</p>
+            ))}
+          </div>
+
+          {sortedItems.length === 0 ? (
+            <p className="px-5 py-6 text-center text-sm text-muted-foreground/50">Nenhum item adicionado</p>
+          ) : (
+            sortedItems.map((item) => (
+              <div key={item.id} className="grid grid-cols-[1fr_60px_110px_100px] gap-2 px-5 py-3 items-center">
+                <p className="text-sm text-foreground">{item.description}</p>
+                <p className="text-sm text-muted-foreground text-center">{item.quantity}</p>
+                <p className="text-sm text-muted-foreground">{formatCurrency(Number(item.unitPrice))}</p>
+                <p className="text-sm font-medium text-foreground text-right">{formatCurrency(Number(item.total))}</p>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Total row */}
+        <div className="flex items-center justify-between border-t border-white/[0.06] px-5 py-4 bg-white/[0.02]">
+          <span className="text-sm font-medium text-muted-foreground">Total</span>
+          <span className="text-2xl font-bold gradient-text">{formatCurrency(Number(proposal.total))}</span>
+        </div>
+      </div>
+
+      {/* Notes */}
+      {proposal.notes && (
+        <div className="glass-card rounded-xl p-5">
+          <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">Observações</h2>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{proposal.notes}</p>
+        </div>
+      )}
+    </div>
+  );
+}
