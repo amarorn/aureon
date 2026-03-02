@@ -38,12 +38,19 @@ export default function NewProposalPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      fetch(`${API_URL}/proposals`, {
+    mutationFn: async (body: Record<string, unknown>) => {
+      const r = await fetch(`${API_URL}/proposals`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify(body),
-      }).then((r) => r.json()),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        const msg = Array.isArray(data?.message) ? data.message.join(". ") : data?.message;
+        throw new Error(msg || "Erro ao criar proposta");
+      }
+      return data;
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
@@ -80,7 +87,7 @@ export default function NewProposalPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
+    <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <Button variant="ghost" size="icon-sm" asChild>
@@ -210,6 +217,11 @@ export default function NewProposalPage() {
           />
         </div>
 
+        {mutation.isError && (
+          <p className="text-center text-sm text-destructive">
+            {mutation.error instanceof Error ? mutation.error.message : "Erro ao criar proposta. Tente novamente."}
+          </p>
+        )}
         {/* Actions */}
         <div className="flex gap-3">
           <Button type="submit" disabled={mutation.isPending} className="flex-1">

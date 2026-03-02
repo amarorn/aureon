@@ -54,6 +54,7 @@ function formatDate(iso: string) {
 
 export default function ProposalsPage() {
   const queryClient = useQueryClient();
+  const expiringSoonWindowMs = 3 * 24 * 60 * 60 * 1000;
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["proposals-stats"],
@@ -63,7 +64,7 @@ export default function ProposalsPage() {
       ),
   });
 
-  const { data: proposals = [], isLoading } = useQuery<Proposal[]>({
+  const { data: proposals = [], isLoading, dataUpdatedAt } = useQuery<Proposal[]>({
     queryKey: ["proposals"],
     queryFn: () =>
       fetch(`${API_URL}/proposals`, { headers: apiHeaders }).then((r) =>
@@ -107,7 +108,7 @@ export default function ProposalsPage() {
     : 0;
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -177,8 +178,9 @@ export default function ProposalsPage() {
         <div className="space-y-3">
           {(proposals as Proposal[]).map((p) => {
             const { label, color, icon: StatusIcon } = STATUS_CONFIG[p.status];
+            const expiringThreshold = dataUpdatedAt > 0 ? new Date(dataUpdatedAt + expiringSoonWindowMs) : null;
             const isExpiring = p.validUntil && p.status !== "accepted" && p.status !== "declined" &&
-              new Date(p.validUntil) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+              expiringThreshold !== null && new Date(p.validUntil) < expiringThreshold;
             return (
               <div key={p.id} className="glass-card group rounded-xl p-5 transition-all duration-150 hover:border-white/[0.12]">
                 <div className="flex items-start justify-between gap-4">

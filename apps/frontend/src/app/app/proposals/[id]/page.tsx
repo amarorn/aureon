@@ -117,7 +117,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
   const sortedItems = [...(proposal.items ?? [])].sort((a, b) => a.sort - b.sort);
 
   return (
-    <div className="mx-auto max-w-3xl p-8 space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
