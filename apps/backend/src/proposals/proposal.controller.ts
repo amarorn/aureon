@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
 import { ProposalService } from './proposal.service';
@@ -38,14 +39,17 @@ export class ProposalController {
   }
 
   @Get(':id')
-  findOne(@TenantId() tenantId: string, @Param('id') id: string) {
+  findOne(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.service.findOne(tenantId, id);
   }
 
   @Put(':id/status')
   updateStatus(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateProposalStatusDto,
   ) {
     return this.service.updateStatus(tenantId, id, dto);
@@ -54,19 +58,25 @@ export class ProposalController {
   @Put(':id/items')
   updateItems(
     @TenantId() tenantId: string,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: { items: ProposalItemDto[] },
   ) {
     return this.service.updateItems(tenantId, id, body.items);
   }
 
   @Post(':id/duplicate')
-  duplicate(@TenantId() tenantId: string, @Param('id') id: string) {
+  duplicate(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.service.duplicate(tenantId, id);
   }
 
   @Delete(':id')
-  remove(@TenantId() tenantId: string, @Param('id') id: string) {
+  remove(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
     return this.service.remove(tenantId, id);
   }
 }
