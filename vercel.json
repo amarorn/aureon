@@ -1,0 +1,6 @@
+{
+  "installCommand": "npm install --include=optional",
+  "buildCommand": "npm run build --workspace=frontend",
+  "framework": "nextjs",
+  "outputDirectory": "apps/frontend"
+}

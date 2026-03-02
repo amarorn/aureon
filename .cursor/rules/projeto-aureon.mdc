@@ -1,0 +1,55 @@
+---
+description: Plano técnico, escopo e status do projeto Aureon
+alwaysApply: true
+---
+
+# Projeto Aureon - Memória do Projeto
+
+Plataforma SaaS multi-tenant: CRM + Conversations + Telefonia + Automação + Dashboard + Integrações.
+
+## Stack
+
+- Backend: Node.js, NestJS, TypeScript, WebSockets (pendente)
+- DB: PostgreSQL (tenant_id, RLS), ClickHouse (analytics), OpenSearch (busca)
+- Eventos: Kafka/Redpanda, Redis, BullMQ
+- Frontend: Next.js, TypeScript, TailwindCSS, ShadCN, Zustand, TanStack Query, ECharts
+- Observabilidade: OpenTelemetry, Prometheus, Grafana, Sentry (pendente)
+
+## Roadmap e Status
+
+| Fase | Módulo | Status |
+|------|--------|--------|
+| 0 | Fundação | Concluída |
+| 1 | CRM | Concluída |
+| 2 | Conversations | Não iniciada |
+| 3 | Telefonia | Concluída |
+| 4 | Automação | Concluída |
+| 5 | Dashboard | Não iniciada |
+| 6 | Integrações | Não iniciada |
+| 7 | Escala | Não iniciada |
+| 8 | IA | Não iniciada |
+
+## Implementado
+
+- Entidades: Tenant, Contact, Tag, Pipeline, Stage, Opportunity, Interaction, Task
+- CRUD contatos, oportunidades, pipelines, tags, interações
+- Frontend: landing, login/signup, /app (acesso sem login), contatos, oportunidades
+- Multi-tenancy via X-Tenant-Id ou DEFAULT_TENANT_ID
+- Docker: PostgreSQL, Redis, Redpanda, ClickHouse, OpenSearch
+
+## Pendências (prioridade)
+
+1. User + JWT + RBAC - autenticação
+3. Eventos de domínio - Kafka
+4. Conversations (Fase 2)
+5. Dashboard (métricas)
+6. Telefonia, Automação, Integrações
+
+## Entidades faltantes
+
+User, Conversation, Message, Call, Workflow, Event
+
+## Documentos de referência
+
+- docs/STATUS_PROJETO.md - status detalhado
+- docs/ARQUITETURA.md - arquitetura

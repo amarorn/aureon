@@ -1,0 +1,20 @@
+{
+  "name": "aureon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma SaaS para gestão de relacionamento, comunicação, automação e análise de vendas",
+  "scripts": {
+    "dev": "npm run dev:frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "db:up": "docker compose up -d postgres redis",
+    "db:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": ["apps/*"]
+}
