@@ -87,8 +87,8 @@ function IntegrationsContent() {
         headers: apiHeaders,
       });
       const data = await res.json();
-      if (data?.url) window.location.assign(data.url);
-      else setMessage({ type: "error", text: "Integração não configurada." });
+      if (res.ok && data?.url) window.location.assign(data.url);
+      else setMessage({ type: "error", text: data?.message ?? "Integração não configurada." });
     } catch {
       setMessage({ type: "error", text: "Erro ao iniciar conexão." });
     }
@@ -111,7 +111,7 @@ function IntegrationsContent() {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
       {/* Page header */}
       <div className="flex items-center gap-4">
         <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg glow-primary-sm">
