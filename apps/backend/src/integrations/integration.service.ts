@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -81,7 +81,9 @@ export class IntegrationService {
         ? this.config.get('INTEGRATION_FACEBOOK_ADS_APP_ID')
         : this.getGoogleClientId(provider);
     if (!clientId) {
-      throw new Error(`Integration ${provider} not configured (missing client ID)`);
+      throw new BadRequestException(
+        `Integração ${provider} não configurada (client ID ausente). Configure as variáveis de ambiente.`,
+      );
     }
 
     if (
