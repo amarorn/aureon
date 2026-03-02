@@ -39,6 +39,7 @@ export default function NewWorkflowPage() {
     actions: [{ type: "create_task", config: { title: "Tarefa automática" } }],
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/pipelines`, { headers: apiHeaders })
@@ -51,13 +52,19 @@ export default function NewWorkflowPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch(`${API_URL}/workflows`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify(form),
       });
-      if (res.ok) router.push("/app/automation");
+      if (res.ok) {
+        router.push("/app/automation");
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      setError(Array.isArray(data.message) ? data.message.join(" ") : data.message || "Erro ao salvar");
     } finally {
       setSaving(false);
     }
@@ -84,7 +91,7 @@ export default function NewWorkflowPage() {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
         <div className="mb-6">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             Voltar
@@ -96,6 +103,11 @@ export default function NewWorkflowPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name">Nome *</Label>
                 <Input
