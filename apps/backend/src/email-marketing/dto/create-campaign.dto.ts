@@ -1,10 +1,29 @@
+import { IsString, IsOptional, IsArray, IsUUID } from 'class-validator';
+
 export class CreateCampaignDto {
+  @IsString()
   name: string;
+
+  @IsString()
   subject: string;
+
+  @IsString()
   bodyHtml: string;
+
+  @IsOptional()
+  @IsString()
   fromName?: string;
+
+  @IsOptional()
+  @IsString()
   fromEmail?: string;
+
+  @IsOptional()
+  @IsString()
   scheduledAt?: string;
-  /** Array of contact IDs or raw emails to send to */
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
   contactIds?: string[];
 }
