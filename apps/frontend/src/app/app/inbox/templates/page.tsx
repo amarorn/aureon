@@ -61,7 +61,7 @@ export default function TemplatesPage() {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
         <div className="mb-6">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/app/inbox">Voltar</Link>
