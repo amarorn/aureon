@@ -38,12 +38,19 @@ export default function NewAppointmentPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (body: Record<string, string>) =>
-      fetch(`${API_URL}/appointments`, {
+    mutationFn: async (body: Record<string, string>) => {
+      const res = await fetch(`${API_URL}/appointments`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify(body),
-      }).then((r) => r.json()),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message || "Erro ao criar";
+        throw new Error(msg);
+      }
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       router.push("/app/calendar");
@@ -66,7 +73,7 @@ export default function NewAppointmentPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto max-w-2xl space-y-8">
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <Button variant="ghost" size="icon-sm" asChild>
@@ -217,7 +224,9 @@ export default function NewAppointmentPage() {
         </div>
 
         {mutation.isError && (
-          <p className="text-center text-sm text-destructive">Erro ao criar agendamento. Tente novamente.</p>
+          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {mutation.error?.message || "Erro ao criar agendamento. Tente novamente."}
+          </p>
         )}
       </form>
     </div>
