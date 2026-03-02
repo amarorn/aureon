@@ -65,7 +65,7 @@ export default function EditContactPage() {
   if (error || !data) return <p className="p-8 text-destructive">Contato não encontrado.</p>;
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
       <header className="border-b bg-background">
         <div className="container mx-auto flex h-14 items-center px-4">
           <Link href="/app" className="text-lg font-semibold">

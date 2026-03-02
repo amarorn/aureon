@@ -4,7 +4,7 @@ import { Phone } from "lucide-react";
 
 export default function TelephonyPage() {
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
       {/* Page header */}
       <div className="flex items-center gap-4">
         <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg glow-primary-sm">

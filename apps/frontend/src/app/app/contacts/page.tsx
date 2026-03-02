@@ -5,7 +5,7 @@ import { Users, UserPlus } from "lucide-react";
 
 export default function ContactsPage() {
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

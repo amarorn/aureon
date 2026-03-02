@@ -27,7 +27,7 @@ export default function ContactDetailPage() {
   if (error || !data) return <p className="p-8 text-destructive">Contato não encontrado.</p>;
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
         <div className="mb-6 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             Voltar
