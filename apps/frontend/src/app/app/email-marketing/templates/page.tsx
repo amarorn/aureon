@@ -37,12 +37,19 @@ export default function EmailTemplatesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      fetch(`${API_URL}/email-templates`, {
+    mutationFn: async (body: Record<string, unknown>) => {
+      const r = await fetch(`${API_URL}/email-templates`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify(body),
-      }).then((r) => r.json()),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        const msg = Array.isArray(data?.message) ? data.message.join(". ") : data?.message;
+        throw new Error(msg || "Erro ao criar template");
+      }
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["email-templates"] });
       setShowForm(false);
@@ -66,7 +73,7 @@ export default function EmailTemplatesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl p-8">
+    <div className="mx-auto max-w-4xl space-y-8">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -122,6 +129,11 @@ export default function EmailTemplatesPage() {
             <Input id="tplVars" placeholder="nome, empresa, link" value={variables} onChange={(e) => setVariables(e.target.value)} />
           </div>
 
+          {createMutation.isError && (
+            <p className="text-sm text-destructive">
+              {createMutation.error instanceof Error ? createMutation.error.message : "Erro ao criar template."}
+            </p>
+          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setShowForm(false)}>Cancelar</Button>
             <Button type="submit" size="sm" disabled={createMutation.isPending}>

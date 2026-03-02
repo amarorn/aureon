@@ -54,12 +54,19 @@ export default function NewCampaignPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      fetch(`${API_URL}/email-campaigns`, {
+    mutationFn: async (body: Record<string, unknown>) => {
+      const r = await fetch(`${API_URL}/email-campaigns`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify(body),
-      }).then((r) => r.json()),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        const msg = Array.isArray(data?.message) ? data.message.join(". ") : data?.message;
+        throw new Error(msg || "Erro ao criar campanha");
+      }
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["email-campaigns"] });
       router.push("/app/email-marketing");
@@ -103,7 +110,7 @@ export default function NewCampaignPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
+    <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <Button variant="ghost" size="icon-sm" asChild>
@@ -274,7 +281,9 @@ export default function NewCampaignPage() {
         </div>
 
         {mutation.isError && (
-          <p className="text-center text-sm text-destructive">Erro ao criar campanha. Tente novamente.</p>
+          <p className="text-center text-sm text-destructive">
+            {mutation.error instanceof Error ? mutation.error.message : "Erro ao criar campanha. Tente novamente."}
+          </p>
         )}
       </form>
     </div>
