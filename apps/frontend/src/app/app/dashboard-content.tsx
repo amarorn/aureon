@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useTheme } from "next-themes";
 import { useQuery } from "@tanstack/react-query";
 import * as echarts from "echarts";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -30,11 +31,36 @@ function formatDays(ms: number) {
   return `${days} dias`;
 }
 
-function Chart({ option }: { option: Record<string, unknown> }) {
+const chartTheme = {
+  light: {
+    tooltipBg: "oklch(1 0 0)",
+    tooltipBorder: "oklch(0.88 0.01 268 / 60%)",
+    tooltipText: "oklch(0.2 0.02 268)",
+    axisLabel: "oklch(0.45 0.02 268)",
+    axisLine: "oklch(0.88 0.01 268 / 60%)",
+    splitLine: "oklch(0.88 0.01 268 / 40%)",
+  },
+  dark: {
+    tooltipBg: "oklch(0.13 0.015 268)",
+    tooltipBorder: "oklch(1 0 0 / 8%)",
+    tooltipText: "#e2e8f0",
+    axisLabel: "#94a3b8",
+    axisLine: "oklch(1 0 0 / 8%)",
+    splitLine: "oklch(1 0 0 / 6%)",
+  },
+};
+
+function Chart({
+  option,
+  theme,
+}: {
+  option: Record<string, unknown>;
+  theme: "light" | "dark";
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
-    const chart = echarts.init(ref.current, "dark");
+    const chart = echarts.init(ref.current, theme);
     chart.setOption({
       backgroundColor: "transparent",
       ...(option as echarts.EChartsOption),
@@ -45,7 +71,7 @@ function Chart({ option }: { option: Record<string, unknown> }) {
       window.removeEventListener("resize", handleResize);
       chart.dispose();
     };
-  }, [option]);
+  }, [option, theme]);
   return <div ref={ref} style={{ height: 280, width: "100%" }} />;
 }
 
@@ -74,6 +100,10 @@ function MetricCard({ title, value, icon, gradient, glow, sub }: MetricCardProps
 }
 
 export function DashboardContent() {
+  const { resolvedTheme } = useTheme();
+  const chartMode = (resolvedTheme === "dark" ? "dark" : "light") as "light" | "dark";
+  const colors = chartTheme[chartMode];
+
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [pipelineId, setPipelineId] = useState("");
@@ -102,21 +132,21 @@ export function DashboardContent() {
   const funnelOption = {
     tooltip: {
       trigger: "axis",
-      backgroundColor: "oklch(0.13 0.015 268)",
-      borderColor: "oklch(1 0 0 / 8%)",
-      textStyle: { color: "#e2e8f0" },
+      backgroundColor: colors.tooltipBg,
+      borderColor: colors.tooltipBorder,
+      textStyle: { color: colors.tooltipText },
     },
     grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
     xAxis: {
       type: "category" as const,
       data: metrics?.funnel?.map((f: { stageName: string }) => f.stageName) ?? [],
-      axisLabel: { color: "#94a3b8", fontSize: 11 },
-      axisLine: { lineStyle: { color: "oklch(1 0 0 / 8%)" } },
+      axisLabel: { color: colors.axisLabel, fontSize: 11 },
+      axisLine: { lineStyle: { color: colors.axisLine } },
     },
     yAxis: {
       type: "value" as const,
-      axisLabel: { color: "#94a3b8", fontSize: 11 },
-      splitLine: { lineStyle: { color: "oklch(1 0 0 / 6%)" } },
+      axisLabel: { color: colors.axisLabel, fontSize: 11 },
+      splitLine: { lineStyle: { color: colors.splitLine } },
     },
     series: [
       {
@@ -134,13 +164,13 @@ export function DashboardContent() {
   const distributionOption = {
     tooltip: {
       trigger: "item",
-      backgroundColor: "oklch(0.13 0.015 268)",
-      borderColor: "oklch(1 0 0 / 8%)",
-      textStyle: { color: "#e2e8f0" },
+      backgroundColor: colors.tooltipBg,
+      borderColor: colors.tooltipBorder,
+      textStyle: { color: colors.tooltipText },
     },
     legend: {
       bottom: 0,
-      textStyle: { color: "#94a3b8", fontSize: 11 },
+      textStyle: { color: colors.axisLabel, fontSize: 11 },
     },
     series: [
       {
@@ -161,15 +191,15 @@ export function DashboardContent() {
   const leadSourceOption = {
     tooltip: {
       trigger: "item",
-      backgroundColor: "oklch(0.13 0.015 268)",
-      borderColor: "oklch(1 0 0 / 8%)",
-      textStyle: { color: "#e2e8f0" },
+      backgroundColor: colors.tooltipBg,
+      borderColor: colors.tooltipBorder,
+      textStyle: { color: colors.tooltipText },
     },
     legend: {
       right: 0,
       top: "center",
       orient: "vertical" as const,
-      textStyle: { color: "#94a3b8", fontSize: 11 },
+      textStyle: { color: colors.axisLabel, fontSize: 11 },
     },
     series: [
       {
@@ -209,7 +239,7 @@ export function DashboardContent() {
   }
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -322,19 +352,19 @@ export function DashboardContent() {
         <div className="glass-card rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Funil de vendas</h2>
           <p className="text-xs text-muted-foreground mb-4">Oportunidades por estágio</p>
-          <Chart option={funnelOption} />
+          <Chart option={funnelOption} theme={chartMode} />
         </div>
 
         <div className="glass-card rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-foreground mb-1">Distribuição por estágio</h2>
           <p className="text-xs text-muted-foreground mb-4">Proporção de oportunidades</p>
-          <Chart option={distributionOption} />
+          <Chart option={distributionOption} theme={chartMode} />
         </div>
 
         <div className="glass-card rounded-2xl p-6 md:col-span-2">
           <h2 className="text-sm font-semibold text-foreground mb-1">Lead Source</h2>
           <p className="text-xs text-muted-foreground mb-4">Origem dos seus leads</p>
-          <Chart option={leadSourceOption} />
+          <Chart option={leadSourceOption} theme={chartMode} />
         </div>
       </div>
     </div>
