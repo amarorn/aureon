@@ -12,6 +12,7 @@ import { EventsModule } from './common/events/events.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { EmailMarketingModule } from './email-marketing/email-marketing.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { CalendarModule } from './calendar/calendar.module';
     DashboardModule,
     IntegrationsModule,
     CalendarModule,
+    EmailMarketingModule,
   ],
 })
 export class AppModule {}

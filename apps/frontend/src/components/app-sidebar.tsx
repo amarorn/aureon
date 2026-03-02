@@ -11,6 +11,7 @@ import {
   Zap,
   Plug,
   CalendarDays,
+  Mail,
   LogOut,
   Sparkles,
 } from "lucide-react";
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/app/calendar", label: "Calendário", icon: CalendarDays, exact: false },
   { href: "/app/inbox", label: "Inbox", icon: MessageSquare, exact: false },
   { href: "/app/telephony", label: "Telefonia", icon: Phone, exact: false },
+  { href: "/app/email-marketing", label: "Email Marketing", icon: Mail, exact: false },
   { href: "/app/automation", label: "Automação", icon: Zap, exact: false },
   { href: "/app/integrations", label: "Integrações", icon: Plug, exact: false },
 ];
