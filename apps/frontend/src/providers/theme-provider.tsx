@@ -4,7 +4,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
-    // @ts-expect-error next-themes ThemeProviderProps incompatibility with React 19
+    // @ts-ignore ThemeProviderProps children compatibility varies by environment
     <NextThemesProvider
       attribute="class"
       defaultTheme="dark"
