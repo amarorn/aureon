@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -15,10 +20,16 @@ const GOOGLE_SCOPES: Record<string, string[]> = {
   [IntegrationProvider.GOOGLE_ADS]: [
     'https://www.googleapis.com/auth/adwords',
   ],
+  [IntegrationProvider.GOOGLE_CALENDAR]: [
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/calendar.events',
+  ],
 };
 
 @Injectable()
 export class IntegrationService {
+  private readonly logger = new Logger(IntegrationService.name);
+
   constructor(
     @InjectRepository(Integration)
     private readonly integrationRepo: Repository<Integration>,
@@ -89,7 +100,8 @@ export class IntegrationService {
     if (
       provider === IntegrationProvider.GOOGLE_ANALYTICS ||
       provider === IntegrationProvider.GOOGLE_BUSINESS_PROFILE ||
-      provider === IntegrationProvider.GOOGLE_ADS
+      provider === IntegrationProvider.GOOGLE_ADS ||
+      provider === IntegrationProvider.GOOGLE_CALENDAR
     ) {
       const scopes = GOOGLE_SCOPES[provider]?.join(' ') || '';
       const state = Buffer.from(JSON.stringify({ tenantId, provider })).toString('base64url');
@@ -134,7 +146,8 @@ export class IntegrationService {
     if (
       provider === IntegrationProvider.GOOGLE_ANALYTICS ||
       provider === IntegrationProvider.GOOGLE_BUSINESS_PROFILE ||
-      provider === IntegrationProvider.GOOGLE_ADS
+      provider === IntegrationProvider.GOOGLE_ADS ||
+      provider === IntegrationProvider.GOOGLE_CALENDAR
     ) {
       tokens = await this.exchangeGoogleCode(provider, code, redirectUri);
     } else if (provider === IntegrationProvider.FACEBOOK_ADS) {
@@ -144,6 +157,25 @@ export class IntegrationService {
     }
 
     let integration = await this.findByProvider(tenantId, provider);
+    const prev = integration?.credentials as Record<string, unknown> | null;
+    if (
+      prev &&
+      typeof prev.refresh_token === 'string' &&
+      tokens &&
+      typeof tokens === 'object' &&
+      !tokens.refresh_token
+    ) {
+      tokens = { ...tokens, refresh_token: prev.refresh_token };
+    }
+
+    const expiresIn = tokens.expires_in;
+    if (typeof expiresIn === 'number' && !tokens.expiry_date) {
+      tokens = {
+        ...tokens,
+        expiry_date: Date.now() + expiresIn * 1000,
+      };
+    }
+
     if (!integration) {
       integration = this.integrationRepo.create({
         tenantId,
@@ -155,7 +187,11 @@ export class IntegrationService {
       integration.status = 'connected';
       integration.credentials = tokens;
     }
-    return this.integrationRepo.save(integration);
+    const saved = await this.integrationRepo.save(integration);
+    this.logger.log(
+      `OAuth callback saved provider=${provider} tenantId=${tenantId} integrationId=${saved.id}`,
+    );
+    return saved;
   }
 
   private async exchangeGoogleCode(
@@ -215,6 +251,17 @@ export class IntegrationService {
       throw new Error(`Facebook token exchange failed: ${err}`);
     }
     return res.json();
+  }
+
+  async updateCredentials(
+    tenantId: string,
+    provider: IntegrationProvider,
+    credentials: Record<string, unknown>,
+  ): Promise<void> {
+    const integration = await this.findByProvider(tenantId, provider);
+    if (!integration) return;
+    integration.credentials = credentials;
+    await this.integrationRepo.save(integration);
   }
 
   async disconnect(tenantId: string, id: string): Promise<Integration> {

@@ -16,6 +16,11 @@ import {
   User,
   Trash2,
   CheckCircle2,
+  RefreshCw,
+  Download,
+  CalendarCheck,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +37,7 @@ interface Appointment {
   status: AppointmentStatus;
   location: string | null;
   contact: { id: string; name: string } | null;
+  googleEventId?: string | null;
 }
 
 const TYPE_LABELS: Record<AppointmentType, string> = {
@@ -101,6 +107,34 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
 
   const queryClient = useQueryClient();
+
+  // Google Calendar integration status
+  const { data: gcStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ["google-calendar-status"],
+    queryFn: () =>
+      fetch(`${API_URL}/appointments/google-calendar/status`, {
+        headers: apiHeaders,
+      }).then((r) => (r.ok ? r.json() : { connected: false })),
+    staleTime: 60_000,
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/appointments/google-calendar/sync`, {
+        method: "POST",
+        headers: apiHeaders,
+      }).then((r) => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+  });
+
+  const importMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/appointments/google-calendar/import`, {
+        method: "POST",
+        headers: apiHeaders,
+      }).then((r) => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+  });
 
   // Date range for the current month
   const startDate = new Date(currentYear, currentMonth, 1).toISOString();
@@ -178,6 +212,95 @@ export default function CalendarPage() {
           </Link>
         </Button>
       </div>
+
+      {/* Google Calendar integration banner */}
+      {gcStatus?.connected ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-3">
+          <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
+            <CalendarCheck className="size-4 shrink-0" />
+            Google Agenda conectado
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              onClick={() => importMutation.mutate()}
+              disabled={importMutation.isPending}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-background/50 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              {importMutation.isPending ? (
+                <RefreshCw className="size-3 animate-spin" />
+              ) : (
+                <Download className="size-3" />
+              )}
+              {importMutation.data
+                ? `${importMutation.data.imported} importados`
+                : "Importar do Google"}
+            </button>
+            <button
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              className="flex items-center gap-1.5 rounded-lg gradient-primary px-3 py-1.5 text-xs font-medium text-white glow-primary-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              {syncMutation.isPending ? (
+                <RefreshCw className="size-3 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3" />
+              )}
+              {syncMutation.data
+                ? (() => {
+                    const d = syncMutation.data as {
+                      synced: number;
+                      failed?: number;
+                      total?: number;
+                      errors?: string[];
+                    };
+                    if (d.failed && d.failed > 0) {
+                      return `${d.synced} ok, ${d.failed} falha(s)`;
+                    }
+                    return `${d.synced} sincronizados`;
+                  })()
+                : "Sincronizar"}
+            </button>
+          </div>
+          {syncMutation.data &&
+            Array.isArray(
+              (syncMutation.data as { errors?: string[] }).errors,
+            ) &&
+            (syncMutation.data as { errors: string[] }).errors.length > 0 && (
+              <div className="w-full mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                <p className="font-medium mb-1">
+                  Alguns itens não sincronizaram (veja o terminal do backend)
+                </p>
+                <ul className="list-disc pl-4 space-y-0.5 text-amber-200/90">
+                  {(syncMutation.data as { errors: string[] }).errors.map(
+                    (e, i) => (
+                      <li key={i} className="break-all">
+                        {e}
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </div>
+            )}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <AlertCircle className="size-4 shrink-0 text-amber-400" />
+            Conecte o Google Agenda para sincronizar seus agendamentos automaticamente
+          </div>
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="ml-auto border-white/[0.08] bg-white/[0.03] hover:bg-accent text-xs gap-1.5"
+          >
+            <Link href="/app/integrations">
+              <ExternalLink className="size-3" />
+              Conectar
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         {/* Calendar Grid */}
@@ -340,13 +463,19 @@ export default function CalendarPage() {
                     )}
                   </div>
 
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
                     <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium", TYPE_COLORS[appt.type])}>
                       {TYPE_LABELS[appt.type]}
                     </span>
                     <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium", STATUS_COLORS[appt.status])}>
                       {STATUS_LABELS[appt.status]}
                     </span>
+                    {appt.googleEventId && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400">
+                        <CalendarCheck className="size-2.5" />
+                        Google
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

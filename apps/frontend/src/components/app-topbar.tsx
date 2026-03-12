@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Menu, Search, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/user-menu";
+import { NotificationBell } from "@/components/notification-bell";
 const pathLabels: Record<string, string> = {
   app: "Dashboard",
   contacts: "Contatos",
@@ -119,6 +120,7 @@ export function AppTopBar({ onMenuClick, onSearchClick }: AppTopBarProps) {
               </kbd>
             </button>
           )}
+          <NotificationBell />
           <UserMenu />
         </div>
       </div>

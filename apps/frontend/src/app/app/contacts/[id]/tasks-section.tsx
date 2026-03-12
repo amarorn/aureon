@@ -1,12 +1,9 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { apiHeaders, API_URL } from "@/lib/api";
 import { useState } from "react";
+import { CheckCheck, ClipboardList, Plus, Trash2, Loader2 } from "lucide-react";
 
 interface Task {
   id: string;
@@ -62,63 +59,175 @@ export function TasksSection({ contactId }: { contactId: string }) {
     },
   });
 
+  // Marca todas as tarefas pendentes como concluídas
+  const markAllMutation = useMutation({
+    mutationFn: async () => {
+      const pending = taskList.filter((t) => !t.isCompleted);
+      await Promise.all(
+        pending.map((t) =>
+          fetch(`${API_URL}/tasks/${t.id}/toggle`, {
+            method: "PUT",
+            headers: apiHeaders,
+          })
+        )
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", contactId] });
+    },
+  });
+
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (newTitle.trim()) createMutation.mutate(newTitle.trim());
   }
 
   const taskList = Array.isArray(tasks) ? tasks : [];
+  const completedCount = taskList.filter((t: Task) => t.isCompleted).length;
+  const totalCount = taskList.length;
+  const allDone = totalCount > 0 && completedCount === totalCount;
+  const pct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <Card>
-      <CardHeader>
-        <h2 className="font-semibold">Tarefas</h2>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <form onSubmit={handleAdd} className="flex gap-2">
-          <Input
-            placeholder="Nova tarefa"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
+    <div className="glass-card rounded-2xl p-5 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-lg gradient-primary flex items-center justify-center shadow-md">
+            <ClipboardList className="h-4 w-4 text-white" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Tarefas</h2>
+            {totalCount > 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                {completedCount} de {totalCount} concluídas
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Marcar todas */}
+        {totalCount > 0 && !allDone && (
+          <button
+            onClick={() => markAllMutation.mutate()}
+            disabled={markAllMutation.isPending}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 disabled:opacity-50"
+          >
+            {markAllMutation.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <CheckCheck className="h-3 w-3" />
+            )}
+            Marcar todas
+          </button>
+        )}
+        {allDone && (
+          <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-500">
+            <CheckCheck className="h-3 w-3" />
+            Tudo concluído
+          </span>
+        )}
+      </div>
+
+      {/* Barra de progresso */}
+      {totalCount > 0 && (
+        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${
+              allDone ? "bg-emerald-500" : "bg-primary"
+            }`}
+            style={{ width: `${pct}%` }}
           />
-          <Button type="submit" size="sm" disabled={createMutation.isPending}>
-            Adicionar
-          </Button>
-        </form>
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        ) : taskList.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma tarefa.</p>
-        ) : (
-          <ul className="space-y-2">
-            {taskList.map((t: Task) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between rounded border px-3 py-2"
-              >
-                <label className="flex cursor-pointer items-center gap-2">
+        </div>
+      )}
+
+      {/* Formulário de nova tarefa */}
+      <form onSubmit={handleAdd} className="flex gap-2">
+        <input
+          placeholder="Nova tarefa..."
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          className="h-9 flex-1 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+        />
+        <button
+          type="submit"
+          disabled={createMutation.isPending || !newTitle.trim()}
+          className="flex h-9 items-center gap-1.5 rounded-xl gradient-primary px-3 text-sm font-medium text-white glow-primary-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {createMutation.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Plus className="h-3.5 w-3.5" />
+          )}
+          Adicionar
+        </button>
+      </form>
+
+      {/* Lista */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : taskList.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-8 text-center">
+          <ClipboardList className="h-8 w-8 text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground">Nenhuma tarefa cadastrada.</p>
+          <p className="text-xs text-muted-foreground/60">Adicione tarefas acima para acompanhar follow-ups.</p>
+        </div>
+      ) : (
+        <ul className="space-y-1.5">
+          {taskList.map((t: Task) => (
+            <li
+              key={t.id}
+              className={`group flex items-center justify-between rounded-xl border px-3 py-2.5 transition-all duration-150 ${
+                t.isCompleted
+                  ? "border-border/40 bg-muted/20 opacity-60"
+                  : "border-border bg-background/30 hover:border-primary/20 hover:bg-primary/[0.03]"
+              }`}
+            >
+              <label className="flex flex-1 cursor-pointer items-center gap-3 min-w-0">
+                <div className="relative shrink-0">
                   <input
                     type="checkbox"
                     checked={t.isCompleted}
                     onChange={() => toggleMutation.mutate(t.id)}
+                    className="sr-only"
                   />
-                  <span className={t.isCompleted ? "line-through text-muted-foreground" : ""}>
-                    {t.title}
-                  </span>
-                </label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => deleteMutation.mutate(t.id)}
+                  <div
+                    onClick={() => toggleMutation.mutate(t.id)}
+                    className={`flex h-4.5 w-4.5 h-[18px] w-[18px] items-center justify-center rounded-md border-2 transition-all cursor-pointer ${
+                      t.isCompleted
+                        ? "border-emerald-500 bg-emerald-500"
+                        : "border-border hover:border-primary"
+                    }`}
+                  >
+                    {t.isCompleted && (
+                      <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 10 10" fill="none">
+                        <path d="M1.5 5l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                </div>
+                <span
+                  className={`text-sm truncate transition-colors ${
+                    t.isCompleted ? "line-through text-muted-foreground" : "text-foreground"
+                  }`}
                 >
-                  Remover
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+                  {t.title}
+                </span>
+              </label>
+              <button
+                onClick={() => deleteMutation.mutate(t.id)}
+                disabled={deleteMutation.isPending}
+                className="ml-2 shrink-0 opacity-0 group-hover:opacity-100 rounded-lg p-1.5 text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive transition-all disabled:opacity-30"
+                title="Remover tarefa"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

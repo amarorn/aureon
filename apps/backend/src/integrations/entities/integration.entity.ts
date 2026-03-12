@@ -11,6 +11,7 @@ export enum IntegrationProvider {
   GOOGLE_BUSINESS_PROFILE = 'google_business_profile',
   FACEBOOK_ADS = 'facebook_ads',
   GOOGLE_ADS = 'google_ads',
+  GOOGLE_CALENDAR = 'google_calendar',
 }
 
 @Entity('integrations')

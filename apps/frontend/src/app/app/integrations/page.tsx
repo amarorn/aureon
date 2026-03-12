@@ -10,6 +10,13 @@ import { Puzzle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 const PROVIDERS = [
   {
+    id: "google_calendar",
+    name: "Google Agenda",
+    description: "Sincronize agendamentos com o Google Calendar",
+    color: "from-blue-500 to-indigo-600",
+    initials: "GC",
+  },
+  {
     id: "google_analytics",
     name: "Google Analytics",
     description: "Métricas de tráfego e conversões do site",

@@ -21,7 +21,12 @@ import { ProposalsModule } from './proposals/proposals.module';
     EventsModule,
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')],
+      envFilePath: [
+        resolve(process.cwd(), '.env'),
+        resolve(process.cwd(), '../.env'),
+        resolve(process.cwd(), '../../.env'),
+        resolve(__dirname, '../../../.env'),
+      ],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -34,7 +39,9 @@ import { ProposalsModule } from './proposals/proposals.module';
         database: config.get('DB_NAME', 'aureon'),
         autoLoadEntities: true,
         synchronize: config.get('NODE_ENV') === 'development',
-        logging: config.get('NODE_ENV') === 'development',
+        logging:
+          config.get('DB_LOGGING', 'true') !== 'false' &&
+          config.get('NODE_ENV') === 'development',
       }),
       inject: [ConfigService],
     }),
