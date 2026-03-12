@@ -12,6 +12,10 @@ export enum IntegrationProvider {
   FACEBOOK_ADS = 'facebook_ads',
   GOOGLE_ADS = 'google_ads',
   GOOGLE_CALENDAR = 'google_calendar',
+  WHATSAPP = 'whatsapp',
+  ASAAS = 'asaas',
+  LINKEDIN = 'linkedin',
+  ZOOM = 'zoom',
 }
 
 @Entity('integrations')

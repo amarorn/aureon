@@ -52,6 +52,11 @@ import { TaskController } from './task.controller';
     InteractionService,
     TaskService,
   ],
-  exports: [TaskService, OpportunityService, PipelineService],
+  exports: [
+    TaskService,
+    OpportunityService,
+    PipelineService,
+    ContactService,
+  ],
 })
 export class CrmModule {}

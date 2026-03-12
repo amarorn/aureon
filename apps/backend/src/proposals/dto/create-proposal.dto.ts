@@ -37,6 +37,10 @@ export class CreateProposalDto {
   @ValidateNested({ each: true })
   @Type(() => ProposalItemDto)
   items?: ProposalItemDto[];
+
+  @IsOptional()
+  @IsString()
+  meetingUrl?: string;
 }
 
 export class UpdateProposalStatusDto {

@@ -5,6 +5,7 @@ import { Appointment } from './entities/appointment.entity';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { GoogleCalendarService } from './google-calendar.service';
+import { ZoomService } from '../integrations/zoom.service';
 
 @Injectable()
 export class AppointmentService {
@@ -14,9 +15,31 @@ export class AppointmentService {
     @InjectRepository(Appointment)
     private readonly repo: Repository<Appointment>,
     private readonly googleCalendar: GoogleCalendarService,
+    private readonly zoom: ZoomService,
   ) {}
 
   async create(tenantId: string, dto: CreateAppointmentDto) {
+    let location = dto.location ?? null;
+    let meetingUrl: string | null = null;
+    const useZoom = dto.useZoomMeeting === true;
+    if (useZoom) {
+      const zoomMeeting = await this.zoom.createMeeting(tenantId, {
+        topic: dto.title,
+        startAt: new Date(dto.startAt),
+        endAt: new Date(dto.endAt),
+        agenda: dto.description,
+      });
+      if (zoomMeeting?.join_url) {
+        meetingUrl = zoomMeeting.join_url;
+        location = location || zoomMeeting.join_url;
+      }
+    }
+
+    const addGoogleMeet =
+      !useZoom &&
+      dto.addGoogleMeet !== false &&
+      (dto.type ?? 'meeting') === 'meeting';
+
     const appointment = this.repo.create({
       tenantId,
       title: dto.title,
@@ -26,19 +49,23 @@ export class AppointmentService {
       type: dto.type ?? 'meeting',
       status: dto.status ?? 'scheduled',
       contactId: dto.contactId ?? null,
-      location: dto.location ?? null,
+      location,
       notes: dto.notes ?? null,
+      meetingUrl,
     });
 
     const saved = await this.repo.save(appointment);
 
-    // Async sync to Google Calendar (non-blocking)
+    const syncPayload = { ...saved, meetingUrl: saved.meetingUrl };
     this.googleCalendar
-      .syncEvent(tenantId, saved)
+      .syncEvent(tenantId, syncPayload, { addGoogleMeet })
       .then(async (result) => {
         if (result.googleEventId) {
           await this.repo.update(saved.id, {
             googleEventId: result.googleEventId,
+            ...(result.meetingUrl
+              ? { meetingUrl: result.meetingUrl }
+              : {}),
           });
         } else if (result.error) {
           this.logger.warn(
@@ -112,11 +139,12 @@ export class AppointmentService {
 
     // Sync update to Google Calendar
     this.googleCalendar
-      .syncEvent(tenantId, saved)
+      .syncEvent(tenantId, saved, { addGoogleMeet: false })
       .then(async (result) => {
         if (result.googleEventId && !saved.googleEventId) {
           await this.repo.update(saved.id, {
             googleEventId: result.googleEventId,
+            ...(result.meetingUrl ? { meetingUrl: result.meetingUrl } : {}),
           });
         } else if (result.error) {
           this.logger.warn(

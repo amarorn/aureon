@@ -23,6 +23,14 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
+import {
+  DashboardViewSwitcher,
+  DashboardGoogleAnalyticsView,
+  DashboardGoogleAdsView,
+  DashboardBusinessProfileView,
+  getStoredDashboardView,
+  type DashboardViewId,
+} from "@/components/dashboard-integration-views";
 
 // Meta mensal fixa para demonstração
 const MONTHLY_GOAL = 350_000;
@@ -147,6 +155,9 @@ const activityIconMap: Record<string, { icon: React.ReactNode; bg: string }> = {
 };
 
 export function DashboardContent() {
+  const [dashboardView, setDashboardView] = useState<DashboardViewId>(() =>
+    typeof window !== "undefined" ? getStoredDashboardView() : "main",
+  );
   const { resolvedTheme } = useTheme();
   const chartMode = (resolvedTheme === "dark" ? "dark" : "light") as "light" | "dark";
   const colors = chartTheme[chartMode];
@@ -272,12 +283,36 @@ export function DashboardContent() {
     ],
   };
 
+  if (dashboardView !== "main") {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Visualização por integração — páginas detalhadas continuam no menu
+            </p>
+          </div>
+          <DashboardViewSwitcher value={dashboardView} onChange={setDashboardView} />
+        </div>
+        <div className="glass-card rounded-2xl p-6">
+          {dashboardView === "analytics" && <DashboardGoogleAnalyticsView />}
+          {dashboardView === "ads" && <DashboardGoogleAdsView />}
+          {dashboardView === "business" && <DashboardBusinessProfileView />}
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center h-full p-8">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm">Carregando métricas...</p>
+      <div className="flex flex-1 flex-col gap-6">
+        <DashboardViewSwitcher value={dashboardView} onChange={setDashboardView} />
+        <div className="flex flex-1 items-center justify-center h-full p-8">
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm">Carregando métricas...</p>
+          </div>
         </div>
       </div>
     );
@@ -285,6 +320,8 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-8">
+      <DashboardViewSwitcher value={dashboardView} onChange={setDashboardView} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

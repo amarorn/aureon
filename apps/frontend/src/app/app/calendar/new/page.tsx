@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, CalendarDays, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface Contact {
   id: string;
@@ -28,6 +29,8 @@ export default function NewAppointmentPage() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
+  const [addGoogleMeet, setAddGoogleMeet] = useState(true);
+  const [useZoomMeeting, setUseZoomMeeting] = useState(false);
 
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["contacts"],
@@ -38,7 +41,7 @@ export default function NewAppointmentPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: async (body: Record<string, string>) => {
+    mutationFn: async (body: Record<string, unknown>) => {
       const res = await fetch(`${API_URL}/appointments`, {
         method: "POST",
         headers: apiHeaders,
@@ -60,7 +63,7 @@ export default function NewAppointmentPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title || !startAt || !endAt) return;
-    mutation.mutate({
+    const payload: Record<string, unknown> = {
       title,
       type,
       startAt: new Date(startAt).toISOString(),
@@ -69,7 +72,12 @@ export default function NewAppointmentPage() {
       ...(location && { location }),
       ...(description && { description }),
       ...(notes && { notes }),
-    });
+    };
+    if (useZoomMeeting) payload.useZoomMeeting = true;
+    else if (type === "meeting")
+      payload.addGoogleMeet = addGoogleMeet;
+
+    mutation.mutate(payload);
   }
 
   return (
@@ -177,6 +185,54 @@ export default function NewAppointmentPage() {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+              Videoconferência
+            </p>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={useZoomMeeting}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setUseZoomMeeting(v);
+                  if (v) setAddGoogleMeet(false);
+                }}
+                className="mt-0.5 size-4 rounded border-white/20 bg-white/5 accent-primary"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-foreground">Criar reunião Zoom</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Gera link Zoom e grava em meetingUrl (integração Zoom conectada).
+                </span>
+              </span>
+            </label>
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3",
+                useZoomMeeting && "pointer-events-none opacity-50",
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={addGoogleMeet}
+                disabled={useZoomMeeting}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setAddGoogleMeet(v);
+                  if (v) setUseZoomMeeting(false);
+                }}
+                className="mt-0.5 size-4 rounded border-white/20 bg-white/5 accent-primary disabled:opacity-50"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-foreground">Adicionar Google Meet</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Ao sincronizar com Google Calendar (tipo reunião). Se Zoom estiver ativo, Meet não é usado.
+                </span>
+              </span>
+            </label>
           </div>
         </div>
 

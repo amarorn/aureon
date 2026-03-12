@@ -3,6 +3,7 @@ import {
   IsOptional,
   IsEnum,
   IsISO8601,
+  IsBoolean,
 } from 'class-validator';
 
 export enum AppointmentTypeEnum {
@@ -53,4 +54,12 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  addGoogleMeet?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  useZoomMeeting?: boolean;
 }

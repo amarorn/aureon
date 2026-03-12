@@ -15,6 +15,9 @@ import { CalendarModule } from './calendar/calendar.module';
 import { EmailMarketingModule } from './email-marketing/email-marketing.module';
 import { ReputationModule } from './reputation/reputation.module';
 import { ProposalsModule } from './proposals/proposals.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AdsModule } from './ads/ads.module';
+import { BusinessModule } from './business/business.module';
 
 @Module({
   imports: [
@@ -57,6 +60,9 @@ import { ProposalsModule } from './proposals/proposals.module';
     EmailMarketingModule,
     ReputationModule,
     ProposalsModule,
+    AnalyticsModule,
+    AdsModule,
+    BusinessModule,
   ],
 })
 export class AppModule {}

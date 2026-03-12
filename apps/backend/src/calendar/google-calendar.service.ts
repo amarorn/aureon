@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { IntegrationService } from '../integrations/integration.service';
 import { IntegrationProvider } from '../integrations/entities/integration.entity';
 
@@ -17,16 +16,19 @@ interface GoogleEventBody {
   location?: string;
   start: { dateTime: string; timeZone: string };
   end: { dateTime: string; timeZone: string };
+  conferenceData?: {
+    createRequest: {
+      requestId: string;
+      conferenceSolutionKey: { type: string };
+    };
+  };
 }
 
 @Injectable()
 export class GoogleCalendarService {
   private readonly logger = new Logger(GoogleCalendarService.name);
 
-  constructor(
-    private readonly integrationService: IntegrationService,
-    private readonly config: ConfigService,
-  ) {}
+  constructor(private readonly integrationService: IntegrationService) {}
 
   async isConnected(tenantId: string): Promise<boolean> {
     const d = await this.getDiagnostics(tenantId);
@@ -130,7 +132,10 @@ export class GoogleCalendarService {
     }
     if (!creds?.access_token && creds?.refresh_token) {
       try {
-        const refreshed = await this.refreshToken(creds.refresh_token);
+        const refreshed = await this.integrationService.refreshGoogleAccessToken(
+          tenantId,
+          creds.refresh_token,
+        );
         await this.integrationService.updateCredentials(
           tenantId,
           IntegrationProvider.GOOGLE_CALENDAR,
@@ -159,7 +164,10 @@ export class GoogleCalendarService {
     if (!creds.refresh_token) return creds.access_token;
 
     try {
-      const refreshed = await this.refreshToken(creds.refresh_token);
+      const refreshed = await this.integrationService.refreshGoogleAccessToken(
+        tenantId,
+        creds.refresh_token,
+      );
       await this.integrationService.updateCredentials(
         tenantId,
         IntegrationProvider.GOOGLE_CALENDAR,
@@ -176,28 +184,6 @@ export class GoogleCalendarService {
     }
   }
 
-  private async refreshToken(refreshToken: string): Promise<GoogleTokens> {
-    const clientId = this.config.get<string>('INTEGRATION_GOOGLE_CLIENT_ID');
-    const clientSecret = this.config.get<string>('INTEGRATION_GOOGLE_CLIENT_SECRET');
-
-    const res = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: refreshToken,
-        client_id: clientId ?? '',
-        client_secret: clientSecret ?? '',
-        grant_type: 'refresh_token',
-      }).toString(),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Token refresh failed: ${err}`);
-    }
-    return res.json() as Promise<GoogleTokens>;
-  }
-
   /**
    * Create or update a Google Calendar event.
    * Returns googleEventId on success; error describes why sync was skipped or failed.
@@ -212,7 +198,12 @@ export class GoogleCalendarService {
       location: string | null;
       googleEventId?: string | null;
     },
-  ): Promise<{ googleEventId: string | null; error?: string }> {
+    options?: { addGoogleMeet?: boolean },
+  ): Promise<{
+    googleEventId: string | null;
+    meetingUrl?: string | null;
+    error?: string;
+  }> {
     const token = await this.getValidToken(tenantId);
     if (!token) {
       const d = await this.getDiagnostics(tenantId);
@@ -237,8 +228,19 @@ export class GoogleCalendarService {
     if (appointment.description) body.description = appointment.description;
     if (appointment.location) body.location = appointment.location;
 
+    const addMeet = Boolean(options?.addGoogleMeet) && !appointment.googleEventId;
+    if (addMeet) {
+      body.conferenceData = {
+        createRequest: {
+          requestId: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          conferenceSolutionKey: { type: 'hangoutsMeet' },
+        },
+      };
+    }
+
     const baseUrl =
       'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+    const insertParams = addMeet ? '?conferenceDataVersion=1' : '';
 
     const res = appointment.googleEventId
       ? await fetch(`${baseUrl}/${appointment.googleEventId}`, {
@@ -249,7 +251,7 @@ export class GoogleCalendarService {
           },
           body: JSON.stringify(body),
         })
-      : await fetch(baseUrl, {
+      : await fetch(baseUrl + insertParams, {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -266,14 +268,26 @@ export class GoogleCalendarService {
       return { googleEventId: null, error: errBody || `HTTP ${res.status}` };
     }
 
-    const data = (await res.json()) as { id: string };
+    const data = (await res.json()) as {
+      id: string;
+      hangoutLink?: string;
+      conferenceData?: {
+        entryPoints?: Array<{ entryPointType?: string; uri?: string }>;
+      };
+    };
     const id = data.id ?? null;
     if (!id) {
       const msg = 'Google Calendar API returned no event id';
       this.logger.warn(msg);
       return { googleEventId: null, error: msg };
     }
-    return { googleEventId: id };
+    let meetingUrl: string | null =
+      data.hangoutLink ??
+      data.conferenceData?.entryPoints?.find(
+        (e) => e.entryPointType === 'video' || e.uri?.includes('meet.google'),
+      )?.uri ??
+      null;
+    return { googleEventId: id, meetingUrl };
   }
 
   /** Delete an event from Google Calendar. */

@@ -35,6 +35,7 @@ export class ProposalService {
       validUntil: dto.validUntil ? new Date(dto.validUntil) : null,
       status: 'draft',
       total,
+      meetingUrl: dto.meetingUrl ?? null,
     });
 
     const saved = await this.proposalRepo.save(proposal);
@@ -112,6 +113,7 @@ export class ProposalService {
       title: `${original.title} (cópia)`,
       contactId: original.contactId ?? undefined,
       notes: original.notes ?? undefined,
+      meetingUrl: original.meetingUrl ?? undefined,
       validUntil: original.validUntil?.toISOString(),
       items: original.items?.map((i) => ({
         description: i.description,

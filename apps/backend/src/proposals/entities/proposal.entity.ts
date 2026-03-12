@@ -57,6 +57,9 @@ export class Proposal {
   @Column({ name: 'responded_at', type: 'timestamp', nullable: true })
   respondedAt: Date | null;
 
+  @Column({ name: 'meeting_url', type: 'varchar', nullable: true })
+  meetingUrl: string | null;
+
   @ManyToOne(() => Contact, { onDelete: 'SET NULL', nullable: true, eager: true })
   @JoinColumn({ name: 'contact_id' })
   contact: Contact | null;

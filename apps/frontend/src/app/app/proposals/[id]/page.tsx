@@ -7,7 +7,7 @@ import { apiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, Send, CheckCircle2, XCircle, Copy,
-  Trash2, User, Clock, FileText, Loader2,
+  Trash2, User, Clock, FileText, Loader2, Video,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ interface Proposal {
   status: ProposalStatus;
   total: number;
   notes: string | null;
+  meetingUrl: string | null;
   validUntil: string | null;
   sentAt: string | null;
   viewedAt: string | null;
@@ -214,6 +215,37 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
             <p className="flex items-center gap-1.5 text-sm text-foreground">
               <Clock className="size-3.5 text-muted-foreground" />
               {formatDate(proposal.validUntil)}
+            </p>
+          </div>
+        )}
+        {proposal.meetingUrl && (
+          <div className="sm:col-span-2">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">Link da reunião</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={proposal.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline break-all"
+              >
+                <Video className="size-3.5 shrink-0" />
+                {proposal.meetingUrl}
+              </a>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0"
+                onClick={() => {
+                  void navigator.clipboard.writeText(proposal.meetingUrl!);
+                }}
+                title="Copiar link"
+              >
+                <Copy className="size-3.5" />
+              </Button>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground/60">
+              Inclua este bloco ao exportar/imprimir (PDF) para o cliente receber o link.
             </p>
           </div>
         )}

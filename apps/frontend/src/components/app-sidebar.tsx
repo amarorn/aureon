@@ -14,6 +14,9 @@ import {
   Mail,
   Star,
   FileCheck,
+  BarChart3,
+  Megaphone,
+  Building2,
   LogOut,
   Sparkles,
   PanelLeftClose,
@@ -61,6 +64,9 @@ const navGroups = [
     items: [
       { href: "/app/automation", label: "Automação", icon: Zap, exact: false },
       { href: "/app/integrations", label: "Integrações", icon: Plug, exact: false },
+      { href: "/app/analytics/google", label: "Google Analytics", icon: BarChart3, exact: false },
+      { href: "/app/ads/google", label: "Google Ads", icon: Megaphone, exact: false },
+      { href: "/app/business/google", label: "Business Profile", icon: Building2, exact: false },
     ],
   },
 ];
