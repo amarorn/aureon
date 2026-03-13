@@ -19,6 +19,15 @@ export type ProposalStatus =
   | 'declined'
   | 'expired';
 
+export type ProposalSignatureStatus =
+  | 'not_sent'
+  | 'sent'
+  | 'viewed'
+  | 'signed'
+  | 'declined'
+  | 'canceled'
+  | 'failed';
+
 @Entity('proposals')
 export class Proposal {
   @PrimaryGeneratedColumn('uuid')
@@ -59,6 +68,24 @@ export class Proposal {
 
   @Column({ name: 'meeting_url', type: 'varchar', nullable: true })
   meetingUrl: string | null;
+
+  @Column({ name: 'signature_provider', type: 'varchar', nullable: true })
+  signatureProvider: string | null;
+
+  @Column({ name: 'signature_status', type: 'varchar', nullable: true })
+  signatureStatus: ProposalSignatureStatus | null;
+
+  @Column({ name: 'signature_request_id', type: 'varchar', nullable: true })
+  signatureRequestId: string | null;
+
+  @Column({ name: 'signature_url', type: 'text', nullable: true })
+  signatureUrl: string | null;
+
+  @Column({ name: 'signature_sent_at', type: 'timestamp', nullable: true })
+  signatureSentAt: Date | null;
+
+  @Column({ name: 'signature_completed_at', type: 'timestamp', nullable: true })
+  signatureCompletedAt: Date | null;
 
   @ManyToOne(() => Contact, { onDelete: 'SET NULL', nullable: true, eager: true })
   @JoinColumn({ name: 'contact_id' })

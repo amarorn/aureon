@@ -13,6 +13,7 @@ import { ProposalService } from './proposal.service';
 import {
   CreateProposalDto,
   ProposalItemDto,
+  SendProposalSignatureDto,
   UpdateProposalStatusDto,
 } from './dto/create-proposal.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
@@ -70,6 +71,23 @@ export class ProposalController {
     @Param('id', ParseUUIDPipe) id: string,
   ) {
     return this.service.duplicate(tenantId, id);
+  }
+
+  @Post(':id/signature/send')
+  sendForSignature(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SendProposalSignatureDto,
+  ) {
+    return this.service.sendForSignature(tenantId, id, dto);
+  }
+
+  @Post(':id/signature/refresh')
+  refreshSignatureStatus(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.service.refreshSignatureStatus(tenantId, id);
   }
 
   @Delete(':id')

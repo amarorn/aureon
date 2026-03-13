@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Proposal } from './entities/proposal.entity';
@@ -6,8 +6,11 @@ import { ProposalItem } from './entities/proposal-item.entity';
 import {
   CreateProposalDto,
   ProposalItemDto,
+  SendProposalSignatureDto,
   UpdateProposalStatusDto,
 } from './dto/create-proposal.dto';
+import { ProposalSignatureService } from '../integrations/proposal-signature.service';
+import { IntegrationProvider } from '../integrations/entities/integration.entity';
 
 @Injectable()
 export class ProposalService {
@@ -16,6 +19,7 @@ export class ProposalService {
     private readonly proposalRepo: Repository<Proposal>,
     @InjectRepository(ProposalItem)
     private readonly itemRepo: Repository<ProposalItem>,
+    private readonly proposalSignature: ProposalSignatureService,
   ) {}
 
   private calcTotal(items: ProposalItemDto[]): number {
@@ -36,6 +40,12 @@ export class ProposalService {
       status: 'draft',
       total,
       meetingUrl: dto.meetingUrl ?? null,
+      signatureProvider: null,
+      signatureStatus: null,
+      signatureRequestId: null,
+      signatureUrl: null,
+      signatureSentAt: null,
+      signatureCompletedAt: null,
     });
 
     const saved = await this.proposalRepo.save(proposal);
@@ -127,6 +137,90 @@ export class ProposalService {
     const p = await this.findOne(tenantId, id);
     await this.proposalRepo.remove(p);
     return { ok: true };
+  }
+
+  async sendForSignature(
+    tenantId: string,
+    id: string,
+    dto: SendProposalSignatureDto,
+  ) {
+    const proposal = await this.findOne(tenantId, id);
+    if (!proposal.contact?.email?.trim()) {
+      throw new BadRequestException(
+        'A proposta precisa de um contato com email para assinatura',
+      );
+    }
+    if (!proposal.contact?.name?.trim()) {
+      throw new BadRequestException(
+        'A proposta precisa de um contato com nome para assinatura',
+      );
+    }
+
+    const result = await this.proposalSignature.sendProposalForSignature(
+      tenantId,
+      {
+        proposalId: proposal.id,
+        title: proposal.title,
+        notes: proposal.notes,
+        total: Number(proposal.total),
+        validUntil: proposal.validUntil,
+        signerName: proposal.contact.name,
+        signerEmail: proposal.contact.email,
+        items: proposal.items.map((item) => ({
+          description: item.description,
+          quantity: Number(item.quantity),
+          unitPrice: Number(item.unitPrice),
+          total: Number(item.total),
+        })),
+      },
+      dto.provider as IntegrationProvider.CLICKSIGN | IntegrationProvider.DOCUSIGN | undefined,
+    );
+
+    await this.proposalRepo.update(id, {
+      signatureProvider: result.provider,
+      signatureStatus: result.status,
+      signatureRequestId: result.requestId,
+      signatureUrl: result.signatureUrl,
+      signatureSentAt: new Date(),
+      status: proposal.status === 'draft' ? 'sent' : proposal.status,
+      sentAt: proposal.sentAt ?? new Date(),
+    });
+
+    return this.findOne(tenantId, id);
+  }
+
+  async refreshSignatureStatus(tenantId: string, id: string) {
+    const proposal = await this.findOne(tenantId, id);
+    if (!proposal.signatureProvider || !proposal.signatureRequestId) {
+      throw new BadRequestException('A proposta ainda não foi enviada para assinatura');
+    }
+
+    const result = await this.proposalSignature.refreshSignatureStatus(
+      tenantId,
+      proposal.signatureProvider as IntegrationProvider.CLICKSIGN | IntegrationProvider.DOCUSIGN,
+      proposal.signatureRequestId,
+      proposal.signatureUrl,
+    );
+
+    const update: Partial<Proposal> = {
+      signatureStatus: result.status,
+      signatureUrl: result.signatureUrl,
+    };
+
+    if (result.status === 'signed') {
+      update.signatureCompletedAt = new Date();
+      update.status = 'accepted';
+      update.respondedAt = proposal.respondedAt ?? new Date();
+    } else if (result.status === 'viewed' && proposal.status === 'sent') {
+      update.status = 'viewed';
+      update.viewedAt = proposal.viewedAt ?? new Date();
+    } else if (result.status === 'declined') {
+      update.status = 'declined';
+      update.respondedAt = proposal.respondedAt ?? new Date();
+    }
+
+    await this.proposalRepo.update(id, update);
+    return this.findOne(tenantId, id);
   }
 
   async getStats(tenantId: string) {

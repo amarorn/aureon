@@ -47,3 +47,9 @@ export class UpdateProposalStatusDto {
   @IsEnum(['sent', 'viewed', 'accepted', 'declined', 'expired'])
   status: 'sent' | 'viewed' | 'accepted' | 'declined' | 'expired';
 }
+
+export class SendProposalSignatureDto {
+  @IsOptional()
+  @IsEnum(['clicksign', 'docusign'])
+  provider?: 'clicksign' | 'docusign';
+}
