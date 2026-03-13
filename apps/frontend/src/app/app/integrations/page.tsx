@@ -84,6 +84,21 @@ const OAUTH_PROVIDERS = [
     color: "from-sky-600 to-blue-700",
     initials: "in",
   },
+  {
+    id: "rd_station",
+    name: "RD Station",
+    description:
+      "Importe leads e segmentações do RD Station Marketing para o CRM",
+    color: "from-emerald-500 to-lime-600",
+    initials: "RD",
+  },
+  {
+    id: "tiktok_ads",
+    name: "TikTok Ads",
+    description: "Campanhas, métricas e gastos diários direto do TikTok for Business",
+    color: "from-neutral-800 to-neutral-950",
+    initials: "TK",
+  },
 ] as const;
 
 /**
@@ -131,6 +146,32 @@ const APIKEY_PROVIDERS = [
     docsHint: "Meta for Developers → seu app → WhatsApp → API Setup",
   },
   {
+    id: "slack",
+    name: "Slack",
+    description: "Alertas do CRM no canal do time via Incoming Webhook",
+    color: "from-fuchsia-500 to-purple-600",
+    initials: "SL",
+    fields: [
+      { key: "webhookUrl", label: "Webhook URL", placeholder: "https://hooks.slack.com/services/...", secret: true },
+    ],
+    configEndpoint: "slack/config",
+    statusEndpoint: "slack/status",
+    docsHint: "api.slack.com → Incoming Webhooks. Eventos enviados: novo lead, deal fechado e tarefa vencida.",
+  },
+  {
+    id: "microsoft-teams",
+    name: "Microsoft Teams",
+    description: "Alertas do CRM no canal do time via webhook do Teams/Workflows",
+    color: "from-indigo-500 to-blue-700",
+    initials: "MT",
+    fields: [
+      { key: "webhookUrl", label: "Webhook URL", placeholder: "https://...logic.azure.com/... ou webhook do Teams", secret: true },
+    ],
+    configEndpoint: "microsoft-teams/config",
+    statusEndpoint: "microsoft-teams/status",
+    docsHint: "learn.microsoft.com → Incoming Webhook/Workflows para Teams. Eventos enviados: novo lead, deal fechado e tarefa vencida.",
+  },
+  {
     id: "asaas",
     name: "Asaas",
     description: "Cobranças via PIX, boleto e cartão integradas ao pipeline",
@@ -175,6 +216,21 @@ const APIKEY_PROVIDERS = [
     configEndpoint: "stripe/config",
     statusEndpoint: "stripe/status",
     docsHint: "dashboard.stripe.com/apikeys → Secret key (test ou live)",
+  },
+  {
+    id: "twilio",
+    name: "Twilio",
+    description: "SMS + VoIP — ligações integradas ao CRM com gravação e transcrição",
+    color: "from-red-500 to-rose-600",
+    initials: "TW",
+    fields: [
+      { key: "accountSid", label: "Account SID", placeholder: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", secret: false },
+      { key: "authToken", label: "Auth Token", placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", secret: true },
+      { key: "phoneNumber", label: "Número Twilio (E.164)", placeholder: "+5511999999999", secret: false },
+    ],
+    configEndpoint: "twilio/config",
+    statusEndpoint: "twilio/status",
+    docsHint: "console.twilio.com → Account SID, Auth Token. Compre um número com voz em Phone Numbers.",
   },
   {
     id: "sendgrid",
@@ -265,6 +321,35 @@ const APIKEY_PROVIDERS = [
     statusEndpoint: "instagram/status",
     docsHint: "Meta for Developers → Produtos → Instagram Messaging. Webhook callback: POST /integrations/instagram/webhook?tenantId={SEU_TENANT_ID}",
   },
+  {
+    id: "calendly",
+    name: "Calendly",
+    description: "Link de agendamento self-service para leads — novas reservas viram appointments no CRM",
+    color: "from-blue-500 to-indigo-600",
+    initials: "CL",
+    fields: [
+      { key: "apiKey", label: "Personal Access Token", placeholder: "eyJhbGciOiJIUzI1NiJ9...", secret: true },
+      { key: "bookingUrl", label: "URL de Agendamento", placeholder: "https://calendly.com/seu-usuario", secret: false },
+    ],
+    configEndpoint: "calendly/config",
+    statusEndpoint: "calendly/status",
+    docsHint: "calendly.com → Integrações → API & Webhooks → Personal Access Tokens. Webhook: POST /integrations/booking/webhook/calendly?tenantId={SEU_TENANT_ID}",
+  },
+  {
+    id: "calcom",
+    name: "Cal.com",
+    description: "Alternativa open-source ao Calendly — self-hosted ou cloud, agendamento integrado ao CRM",
+    color: "from-gray-700 to-gray-900",
+    initials: "CC",
+    fields: [
+      { key: "apiKey", label: "API Key", placeholder: "cal_live_xxxxxxxxxxxxxxxx", secret: true },
+      { key: "bookingUrl", label: "URL de Agendamento", placeholder: "https://cal.com/seu-usuario", secret: false },
+      { key: "baseUrl", label: "API Base URL (self-hosted, opcional)", placeholder: "https://api.cal.com/v1", secret: false },
+    ],
+    configEndpoint: "calcom/config",
+    statusEndpoint: "calcom/status",
+    docsHint: "cal.com → Settings → Developer → API Keys. Webhook: POST /integrations/booking/webhook/calcom?tenantId={SEU_TENANT_ID}",
+  },
 ] as const;
 
 type OAuthProviderId = (typeof OAUTH_PROVIDERS)[number]["id"];
@@ -325,6 +410,13 @@ const OAUTH_PROVIDER_CREDENTIALS: Record<
     mode: "clientSecret",
     hint: "developers.linkedin.com → Auth → Redirect URL = callback do backend",
   },
+  rd_station: {
+    bodyKey: "rd_station",
+    idLabel: "Client ID",
+    secretLabel: "Client Secret",
+    mode: "clientSecret",
+    hint: "developers.rdstation.com → app OAuth do RD Station Marketing → Redirect URL = callback do backend",
+  },
   gmail: {
     bodyKey: "gmail",
     idLabel: "Client ID",
@@ -339,12 +431,46 @@ const OAUTH_PROVIDER_CREDENTIALS: Record<
     mode: "clientSecret",
     hint: "portal.azure.com → App registrations → Authentication → Redirect URI = callback do backend",
   },
+  tiktok_ads: {
+    bodyKey: "tiktok_ads",
+    idLabel: "App ID",
+    secretLabel: "App Secret",
+    mode: "appSecret",
+    hint: "ads.tiktok.com/marketing_api → Meu App → Informações básicas. Redirect URI = callback do backend.",
+  },
 };
 
 interface Integration {
   id: string;
   provider: string;
   status: string;
+}
+
+interface CardMessage {
+  type: "success" | "error";
+  text: string;
+}
+
+function CardFeedback({ message }: { message: CardMessage | null }) {
+  if (!message) return null;
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-lg px-3 py-2 text-xs",
+        message.type === "success"
+          ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+          : "bg-red-500/10 border border-red-500/20 text-red-400",
+      )}
+    >
+      {message.type === "success" ? (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+      ) : (
+        <XCircle className="h-3.5 w-3.5 shrink-0" />
+      )}
+      {message.text}
+    </div>
+  );
 }
 
 // ── OAuth Card (Conectar OU credenciais por tenant, estilo WhatsApp) ───────
@@ -368,7 +494,7 @@ function OAuthCard({
   const [secretValue, setSecretValue] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [cardMsg, setCardMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [cardMsg, setCardMsg] = useState<CardMessage | null>(null);
 
   async function handleSaveCredentials(e: React.FormEvent) {
     e.preventDefault();
@@ -430,23 +556,9 @@ function OAuthCard({
         )}
       </div>
 
-      {cardMsg && (
-        <div
-          className={cn(
-            "flex items-center gap-2 rounded-lg px-3 py-2 text-xs mb-3",
-            cardMsg.type === "success"
-              ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-              : "bg-red-500/10 border border-red-500/20 text-red-400",
-          )}
-        >
-          {cardMsg.type === "success" ? (
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-          ) : (
-            <XCircle className="h-3.5 w-3.5 shrink-0" />
-          )}
-          {cardMsg.text}
-        </div>
-      )}
+      <div className="mb-3">
+        <CardFeedback message={cardMsg} />
+      </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
@@ -591,7 +703,7 @@ function ApiKeyCard({
   const [values, setValues] = useState<Record<string, string>>({});
   const [showSecret, setShowSecret] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
-  const [cardMsg, setCardMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [cardMsg, setCardMsg] = useState<CardMessage | null>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/integrations/${provider.statusEndpoint}`, { headers: apiHeaders })
@@ -644,20 +756,9 @@ function ApiKeyCard({
         )}
       </div>
 
-      {cardMsg && (
-        <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs mb-3 ${
-          cardMsg.type === "success"
-            ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-            : "bg-red-500/10 border border-red-500/20 text-red-400"
-        }`}>
-          {cardMsg.type === "success" ? (
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-          ) : (
-            <XCircle className="h-3.5 w-3.5 shrink-0" />
-          )}
-          {cardMsg.text}
-        </div>
-      )}
+      <div className="mb-3">
+        <CardFeedback message={cardMsg} />
+      </div>
 
       <div className="flex justify-end">
         <Button
@@ -730,6 +831,520 @@ function ApiKeyCard({
           </div>
         </form>
       )}
+    </div>
+  );
+}
+
+function RdStationOperationsCard({
+  integration,
+  onConnect,
+  onDisconnect,
+  onSaved,
+}: {
+  integration?: Integration;
+  onConnect: (id: OAuthProviderId) => void;
+  onDisconnect: (id: string) => void;
+  onSaved: (msg: string) => void;
+}) {
+  const isConnected = integration?.status === "connected";
+  const [loadingSegmentations, setLoadingSegmentations] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [segmentations, setSegmentations] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedSegmentationId, setSelectedSegmentationId] = useState("");
+  const [cardMsg, setCardMsg] = useState<CardMessage | null>(null);
+  const [syncResult, setSyncResult] = useState<{
+    imported: number;
+    skipped: number;
+    errors: string[];
+    fetched: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isConnected) {
+      setSegmentations([]);
+      setSelectedSegmentationId("");
+      return;
+    }
+
+    setLoadingSegmentations(true);
+    fetch(`${API_URL}/integrations/rd-station/segmentations`, { headers: apiHeaders })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error((data as { error?: string; message?: string }).error ?? "Erro ao listar segmentações.");
+        }
+        return data as { items?: Array<{ id: string; name: string }> };
+      })
+      .then((data) => {
+        const items = Array.isArray(data.items) ? data.items : [];
+        setSegmentations(items);
+        setSelectedSegmentationId((current) => current || items[0]?.id || "");
+      })
+      .catch((error) => {
+        setCardMsg({
+          type: "error",
+          text: error instanceof Error ? error.message : "Erro ao carregar segmentações.",
+        });
+      })
+      .finally(() => setLoadingSegmentations(false));
+  }, [isConnected]);
+
+  async function handleSync() {
+    if (!selectedSegmentationId) {
+      setCardMsg({ type: "error", text: "Selecione uma segmentação para importar." });
+      return;
+    }
+
+    setSyncing(true);
+    setCardMsg(null);
+    setSyncResult(null);
+    try {
+      const res = await fetch(`${API_URL}/integrations/rd-station/sync-segmentation`, {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({ segmentationId: selectedSegmentationId, limit: 100 }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.ok === false) {
+        throw new Error((data as { error?: string; message?: string }).error ?? "Falha ao importar leads.");
+      }
+      const result = {
+        imported: Number((data as { imported?: number }).imported ?? 0),
+        skipped: Number((data as { skipped?: number }).skipped ?? 0),
+        fetched: Number((data as { fetched?: number }).fetched ?? 0),
+        errors: Array.isArray((data as { errors?: string[] }).errors) ? (data as { errors: string[] }).errors : [],
+      };
+      setSyncResult(result);
+      setCardMsg({
+        type: "success",
+        text: `Importação concluída. ${result.imported} leads criados no CRM.`,
+      });
+      onSaved("RD Station: importação concluída.");
+    } catch (error) {
+      setCardMsg({
+        type: "error",
+        text: error instanceof Error ? error.message : "Falha ao importar leads do RD Station.",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <div className="glass-card rounded-2xl p-6 transition-all duration-200 border border-emerald-500/10">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-lime-600 flex items-center justify-center shadow-md">
+            <span className="text-white text-xs font-bold">RD</span>
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">RD Station: importar leads</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Depois de conectar o OAuth, selecione uma segmentação e traga os leads para o CRM.
+            </p>
+          </div>
+        </div>
+        <Badge
+          className={cn(
+            "text-xs",
+            isConnected
+              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              : "bg-amber-500/10 text-amber-400 border-amber-500/20",
+          )}
+        >
+          {isConnected ? "Pronto para importar" : "Conexão pendente"}
+        </Badge>
+      </div>
+
+      <div className="space-y-3">
+        <CardFeedback message={cardMsg} />
+
+        {!isConnected ? (
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Esta integração já tem backend pronto, mas precisa do OAuth conectado antes da primeira importação.
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => integration && onDisconnect(integration.id)}
+                disabled={!integration}
+                className="border-white/[0.08] bg-white/[0.03] text-xs"
+              >
+                Limpar conexão antiga
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => onConnect("rd_station")}
+                className="gradient-primary text-white border-0 text-xs"
+              >
+                Conectar RD Station
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] items-end">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Segmentação do RD Station
+                </label>
+                <select
+                  value={selectedSegmentationId}
+                  onChange={(e) => setSelectedSegmentationId(e.target.value)}
+                  disabled={loadingSegmentations || segmentations.length === 0}
+                  className="w-full h-10 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none"
+                >
+                  {segmentations.length === 0 ? (
+                    <option value="">
+                      {loadingSegmentations ? "Carregando segmentações..." : "Nenhuma segmentação encontrada"}
+                    </option>
+                  ) : (
+                    segmentations.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSync}
+                disabled={syncing || loadingSegmentations || !selectedSegmentationId}
+                className="gradient-primary text-white border-0 text-xs"
+              >
+                {(syncing || loadingSegmentations) && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+                Importar leads
+              </Button>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              Use esta etapa para a primeira carga ou para sincronizações sob demanda de uma segmentação específica.
+            </p>
+
+            {syncResult && (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Lidos</p>
+                  <p className="text-xl font-semibold mt-1">{syncResult.fetched}</p>
+                </div>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-emerald-400/80">Importados</p>
+                  <p className="text-xl font-semibold mt-1 text-emerald-400">{syncResult.imported}</p>
+                </div>
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Ignorados</p>
+                  <p className="text-xl font-semibold mt-1">{syncResult.skipped}</p>
+                </div>
+              </div>
+            )}
+
+            {syncResult && syncResult.errors.length > 0 && (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
+                <p className="text-xs font-medium text-red-400 mb-1">Ocorreram erros durante a importação</p>
+                <p className="text-[11px] text-red-300/80">{syncResult.errors.slice(0, 3).join(" | ")}</p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LinkedInLeadGenCard({
+  integration,
+  onConnect,
+  onSaved,
+}: {
+  integration?: Integration;
+  onConnect: (id: OAuthProviderId) => void;
+  onSaved: (msg: string) => void;
+}) {
+  const isConnected = integration?.status === "connected";
+  const [loadingConfig, setLoadingConfig] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [ownerUrn, setOwnerUrn] = useState("");
+  const [leadType, setLeadType] = useState("SPONSORED");
+  const [versionedLeadGenFormUrn, setVersionedLeadGenFormUrn] = useState("");
+  const [maxResponses, setMaxResponses] = useState("25");
+  const [cardMsg, setCardMsg] = useState<CardMessage | null>(null);
+  const [syncResult, setSyncResult] = useState<{
+    imported: number;
+    skipped: number;
+    errors: string[];
+    processed: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!isConnected) return;
+
+    setLoadingConfig(true);
+    fetch(`${API_URL}/integrations/linkedin/leadgen-config`, { headers: apiHeaders })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error((data as { error?: string; message?: string }).error ?? "Erro ao carregar configuração.");
+        }
+        return data as {
+          ownerUrn?: string | null;
+          leadType?: string;
+          versionedLeadGenFormUrn?: string | null;
+        };
+      })
+      .then((data) => {
+        setOwnerUrn(data.ownerUrn ?? "");
+        setLeadType(data.leadType ?? "SPONSORED");
+        setVersionedLeadGenFormUrn(data.versionedLeadGenFormUrn ?? "");
+      })
+      .catch((error) => {
+        setCardMsg({
+          type: "error",
+          text: error instanceof Error ? error.message : "Erro ao carregar configuração do LinkedIn.",
+        });
+      })
+      .finally(() => setLoadingConfig(false));
+  }, [isConnected]);
+
+  async function handleSaveConfig(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ownerUrn.trim()) {
+      setCardMsg({ type: "error", text: "Informe o ownerUrn da conta ou organização." });
+      return;
+    }
+
+    setSavingConfig(true);
+    setCardMsg(null);
+    try {
+      const res = await fetch(`${API_URL}/integrations/linkedin/leadgen-config`, {
+        method: "PUT",
+        headers: apiHeaders,
+        body: JSON.stringify({
+          ownerUrn: ownerUrn.trim(),
+          leadType,
+          versionedLeadGenFormUrn: versionedLeadGenFormUrn.trim() || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.ok === false) {
+        throw new Error((data as { error?: string; message?: string }).error ?? "Falha ao salvar configuração.");
+      }
+      setCardMsg({ type: "success", text: "Configuração salva. Agora você pode sincronizar os formulários." });
+      onSaved("LinkedIn Lead Gen configurado.");
+    } catch (error) {
+      setCardMsg({
+        type: "error",
+        text: error instanceof Error ? error.message : "Falha ao salvar configuração do LinkedIn.",
+      });
+    } finally {
+      setSavingConfig(false);
+    }
+  }
+
+  async function handleSync() {
+    if (!ownerUrn.trim()) {
+      setCardMsg({ type: "error", text: "Salve primeiro o ownerUrn para sincronizar leads." });
+      return;
+    }
+
+    setSyncing(true);
+    setCardMsg(null);
+    setSyncResult(null);
+    try {
+      const res = await fetch(`${API_URL}/integrations/linkedin/sync-leadgen-batch`, {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({
+          ownerUrn: ownerUrn.trim(),
+          leadType,
+          versionedLeadGenFormUrn: versionedLeadGenFormUrn.trim() || undefined,
+          maxResponses: Number(maxResponses) || 25,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.ok === false) {
+        throw new Error((data as { error?: string; message?: string }).error ?? "Falha ao sincronizar leads.");
+      }
+      const result = {
+        imported: Number((data as { imported?: number }).imported ?? 0),
+        skipped: Number((data as { skipped?: number }).skipped ?? 0),
+        processed: Number((data as { processed?: number; fetched?: number }).processed ?? (data as { fetched?: number }).fetched ?? 0),
+        errors: Array.isArray((data as { errors?: string[] }).errors) ? (data as { errors: string[] }).errors : [],
+      };
+      setSyncResult(result);
+      setCardMsg({
+        type: "success",
+        text: `Sincronização concluída. ${result.imported} leads do LinkedIn foram importados.`,
+      });
+      onSaved("LinkedIn Lead Gen sincronizado.");
+    } catch (error) {
+      setCardMsg({
+        type: "error",
+        text: error instanceof Error ? error.message : "Falha ao sincronizar leads do LinkedIn.",
+      });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  return (
+    <div className="glass-card rounded-2xl p-6 transition-all duration-200 border border-sky-500/10">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-600 to-blue-700 flex items-center justify-center shadow-md">
+            <span className="text-white text-xs font-bold">in</span>
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">LinkedIn Lead Gen</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Configure o `ownerUrn` e execute a sincronização em lote dos formulários de lead.
+            </p>
+          </div>
+        </div>
+        <Badge
+          className={cn(
+            "text-xs",
+            isConnected
+              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              : "bg-amber-500/10 text-amber-400 border-amber-500/20",
+          )}
+        >
+          {isConnected ? "Configuração operacional" : "OAuth pendente"}
+        </Badge>
+      </div>
+
+      <div className="space-y-3">
+        <CardFeedback message={cardMsg} />
+
+        {!isConnected ? (
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              O OAuth do LinkedIn precisa estar conectado antes de usar Lead Gen. Depois disso, esta tela cobre a parte que faltava na UX.
+            </p>
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={() => onConnect("linkedin")}
+                className="gradient-primary text-white border-0 text-xs"
+              >
+                Conectar LinkedIn
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSaveConfig} className="space-y-3">
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  ownerUrn
+                </label>
+                <input
+                  type="text"
+                  value={ownerUrn}
+                  onChange={(e) => setOwnerUrn(e.target.value)}
+                  placeholder="urn:li:sponsoredAccount:123456 ou urn:li:organization:123456"
+                  className="w-full h-10 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Tipo de lead
+                </label>
+                <select
+                  value={leadType}
+                  onChange={(e) => setLeadType(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors appearance-none"
+                >
+                  <option value="SPONSORED">SPONSORED</option>
+                  <option value="ORGANIZATION_PRODUCT">ORGANIZATION_PRODUCT</option>
+                  <option value="COMPANY">COMPANY</option>
+                  <option value="EVENT">EVENT</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Máx. respostas por sync
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={maxResponses}
+                  onChange={(e) => setMaxResponses(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground block mb-1">
+                  Form URN (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={versionedLeadGenFormUrn}
+                  onChange={(e) => setVersionedLeadGenFormUrn(e.target.value)}
+                  placeholder="urn:li:versionedLeadGenForm:..."
+                  className="w-full h-10 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                />
+              </div>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              Use o `ownerUrn` da conta de anúncios ou organização do cliente. Se informar o form URN, a sincronização fica restrita a um formulário específico.
+            </p>
+
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={savingConfig || loadingConfig}
+                variant="outline"
+                className="border-white/[0.08] bg-white/[0.03] text-xs"
+              >
+                {(savingConfig || loadingConfig) && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+                Salvar configuração
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSync}
+                disabled={syncing || loadingConfig}
+                className="gradient-primary text-white border-0 text-xs"
+              >
+                {syncing && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+                Sincronizar leads
+              </Button>
+            </div>
+
+            {syncResult && (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Processados</p>
+                  <p className="text-xl font-semibold mt-1">{syncResult.processed}</p>
+                </div>
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-emerald-400/80">Importados</p>
+                  <p className="text-xl font-semibold mt-1 text-emerald-400">{syncResult.imported}</p>
+                </div>
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+                  <p className="text-[11px] uppercase tracking-widest text-muted-foreground">Ignorados</p>
+                  <p className="text-xl font-semibold mt-1">{syncResult.skipped}</p>
+                </div>
+              </div>
+            )}
+
+            {syncResult && syncResult.errors.length > 0 && (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3">
+                <p className="text-xs font-medium text-red-400 mb-1">Ocorreram erros durante a sincronização</p>
+                <p className="text-[11px] text-red-300/80">{syncResult.errors.slice(0, 3).join(" | ")}</p>
+              </div>
+            )}
+          </form>
+        )}
+      </div>
     </div>
   );
 }
@@ -819,10 +1434,47 @@ function IntegrationsContent() {
         <div className="space-y-6">
           <div>
             <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-widest">
+              Ativação & Importação
+            </h2>
+            <p className="text-xs text-muted-foreground mb-3">
+              Estas integrações já passam da fase de credencial. Depois de conectar, o time precisa executar uma etapa operacional para gerar valor dentro do CRM.
+            </p>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <RdStationOperationsCard
+                integration={integrations.find((i) => i.provider === "rd_station")}
+                onConnect={handleOAuthConnect}
+                onDisconnect={handleDisconnect}
+                onSaved={(msg) => setMessage({ type: "success", text: msg })}
+              />
+              <LinkedInLeadGenCard
+                integration={integrations.find((i) => i.provider === "linkedin")}
+                onConnect={handleOAuthConnect}
+                onSaved={(msg) => setMessage({ type: "success", text: msg })}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-widest">
               Comunicação & Pagamentos
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
-              {APIKEY_PROVIDERS.map((provider) => (
+              {APIKEY_PROVIDERS.filter((p) => p.id !== "calendly" && p.id !== "calcom").map((provider) => (
+                <ApiKeyCard
+                  key={provider.id}
+                  provider={provider}
+                  onSaved={(msg) => setMessage({ type: "success", text: msg })}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-widest">
+              Agendamento Self-Service
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {APIKEY_PROVIDERS.filter((p) => p.id === "calendly" || p.id === "calcom").map((provider) => (
                 <ApiKeyCard
                   key={provider.id}
                   provider={provider}
