@@ -18,7 +18,9 @@ export interface TenantOAuthConfig {
   google_ads?: TenantOAuthProviderConfig;
   facebook_ads?: TenantOAuthProviderConfig;
   linkedin?: TenantOAuthProviderConfig;
+  rd_station?: TenantOAuthProviderConfig;
   zoom?: TenantOAuthProviderConfig;
   gmail?: TenantOAuthProviderConfig;
   outlook?: TenantOAuthProviderConfig;
+  tiktok_ads?: TenantOAuthProviderConfig;
 }
