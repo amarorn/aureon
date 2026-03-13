@@ -36,6 +36,9 @@ export class Task {
   @Column({ name: 'is_completed', default: false })
   isCompleted: boolean;
 
+  @Column({ name: 'overdue_notified_at', type: 'timestamp', nullable: true })
+  overdueNotifiedAt: Date | null;
+
   @Column({ type: 'int', default: 0 })
   priority: number;
 

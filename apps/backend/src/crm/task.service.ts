@@ -20,6 +20,7 @@ export class TaskService {
       ...dto,
       tenantId,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      overdueNotifiedAt: null,
     });
     const saved = await this.taskRepo.save(task);
     this.appEvents.emit('task.created', {
@@ -62,12 +63,18 @@ export class TaskService {
       ...dto,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : task.dueDate,
     });
+    if (dto.dueDate !== undefined || dto.isCompleted !== undefined) {
+      task.overdueNotifiedAt = null;
+    }
     return this.taskRepo.save(task);
   }
 
   async toggleComplete(tenantId: string, id: string): Promise<Task> {
     const task = await this.findOne(tenantId, id);
     task.isCompleted = !task.isCompleted;
+    if (task.isCompleted) {
+      task.overdueNotifiedAt = null;
+    }
     return this.taskRepo.save(task);
   }
 

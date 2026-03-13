@@ -231,6 +231,81 @@ export class IntegrationController {
     return { ok: true };
   }
 
+  // ── Team notifications ────────────────────────────────────────────────────
+
+  @Get('slack/status')
+  @UseGuards(TenantGuard)
+  async slackStatus(@TenantId() tenantId: string) {
+    const connected = await this.teamNotifications.isConnected(
+      tenantId,
+      IntegrationProvider.SLACK,
+    );
+    return { connected };
+  }
+
+  @Post('slack/config')
+  @UseGuards(TenantGuard)
+  async saveSlackConfig(
+    @TenantId() tenantId: string,
+    @Body() body: { webhookUrl: string },
+  ) {
+    await this.teamNotifications.saveSlackConfig(tenantId, body.webhookUrl);
+    return { ok: true };
+  }
+
+  @Get('microsoft-teams/status')
+  @UseGuards(TenantGuard)
+  async microsoftTeamsStatus(@TenantId() tenantId: string) {
+    const connected = await this.teamNotifications.isConnected(
+      tenantId,
+      IntegrationProvider.MICROSOFT_TEAMS,
+    );
+    return { connected };
+  }
+
+  @Post('microsoft-teams/config')
+  @UseGuards(TenantGuard)
+  async saveMicrosoftTeamsConfig(
+    @TenantId() tenantId: string,
+    @Body() body: { webhookUrl: string },
+  ) {
+    await this.teamNotifications.saveTeamsConfig(tenantId, body.webhookUrl);
+    return { ok: true };
+  }
+
+  // ── Twilio (SMS + VoIP) ───────────────────────────────────────────────────
+
+  @Get('twilio/status')
+  @UseGuards(TenantGuard)
+  async twilioStatus(@TenantId() tenantId: string) {
+    const connected = await this.twilio.isConnected(tenantId);
+    return { connected };
+  }
+
+  @Post('twilio/config')
+  @UseGuards(TenantGuard)
+  async saveTwilioConfig(
+    @TenantId() tenantId: string,
+    @Body() body: { accountSid: string; authToken: string; phoneNumber: string },
+  ) {
+    await this.twilio.saveConfig(
+      tenantId,
+      body.accountSid,
+      body.authToken,
+      body.phoneNumber,
+    );
+    return { ok: true };
+  }
+
+  @Post('twilio/sms')
+  @UseGuards(TenantGuard)
+  async sendTwilioSms(
+    @TenantId() tenantId: string,
+    @Body() body: { to: string; body: string },
+  ) {
+    return this.twilio.sendSms(tenantId, body.to, body.body);
+  }
+
   // ── Email providers ───────────────────────────────────────────────────────
 
   @Get('sendgrid/status')
