@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(/Users/joseamaro/Documents/Projeto/aureon/node_modules/.bin/tsc -p /Users/joseamaro/Documents/Projeto/aureon/apps/backend/tsconfig.json --noEmit --skipLibCheck)",
-      "Bash(/Users/joseamaro/Documents/Projeto/aureon/.env.example:*)"
+      "Bash(/Users/joseamaro/Documents/Projeto/aureon/.env.example:*)",
+      "Bash(find /Users/joseamaro/Documents/Projeto/aureon/apps/frontend/src/app/app/calendar -type f -name *.tsx -o -name *.ts)"
     ]
   }
 }
