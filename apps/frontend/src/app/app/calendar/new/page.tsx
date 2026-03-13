@@ -30,6 +30,7 @@ export default function NewAppointmentPage() {
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [addGoogleMeet, setAddGoogleMeet] = useState(true);
+  const [addTeamsMeeting, setAddTeamsMeeting] = useState(false);
   const [useZoomMeeting, setUseZoomMeeting] = useState(false);
 
   const { data: contacts = [] } = useQuery<Contact[]>({
@@ -74,8 +75,10 @@ export default function NewAppointmentPage() {
       ...(notes && { notes }),
     };
     if (useZoomMeeting) payload.useZoomMeeting = true;
-    else if (type === "meeting")
+    else if (type === "meeting") {
       payload.addGoogleMeet = addGoogleMeet;
+      if (addTeamsMeeting) payload.addTeamsMeeting = true;
+    }
 
     mutation.mutate(payload);
   }
@@ -230,6 +233,30 @@ export default function NewAppointmentPage() {
                 <span className="font-medium text-foreground">Adicionar Google Meet</span>
                 <span className="mt-0.5 block text-xs text-muted-foreground">
                   Ao sincronizar com Google Calendar (tipo reunião). Se Zoom estiver ativo, Meet não é usado.
+                </span>
+              </span>
+            </label>
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3",
+                useZoomMeeting && "pointer-events-none opacity-50",
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={addTeamsMeeting}
+                disabled={useZoomMeeting}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setAddTeamsMeeting(v);
+                  if (v) setUseZoomMeeting(false);
+                }}
+                className="mt-0.5 size-4 rounded border-white/20 bg-white/5 accent-primary disabled:opacity-50"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-foreground">Reunião Microsoft Teams</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Ao sincronizar com Outlook (Microsoft 365). Gera link Teams no evento.
                 </span>
               </span>
             </label>
