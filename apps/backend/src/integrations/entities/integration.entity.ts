@@ -13,10 +13,13 @@ export enum IntegrationProvider {
   GOOGLE_ADS = 'google_ads',
   GOOGLE_CALENDAR = 'google_calendar',
   WHATSAPP = 'whatsapp',
+  SLACK = 'slack',
+  MICROSOFT_TEAMS = 'microsoft_teams',
   ASAAS = 'asaas',
   MERCADOPAGO = 'mercadopago',
   STRIPE = 'stripe',
   LINKEDIN = 'linkedin',
+  RD_STATION = 'rd_station',
   ZOOM = 'zoom',
   SENDGRID = 'sendgrid',
   AMAZON_SES = 'amazon_ses',
@@ -25,6 +28,10 @@ export enum IntegrationProvider {
   GMAIL = 'gmail',
   OUTLOOK = 'outlook',
   INSTAGRAM = 'instagram',
+  TIKTOK_ADS = 'tiktok_ads',
+  TWILIO = 'twilio',
+  CALENDLY = 'calendly',
+  CAL_COM = 'cal_com',
 }
 
 @Entity('integrations')
