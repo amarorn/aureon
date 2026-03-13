@@ -19,6 +19,7 @@ import { ProposalsModule } from './proposals/proposals.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AdsModule } from './ads/ads.module';
 import { BusinessModule } from './business/business.module';
+import { EmailInboxModule } from './email-inbox/email-inbox.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { BusinessModule } from './business/business.module';
     AnalyticsModule,
     AdsModule,
     BusinessModule,
+    EmailInboxModule,
   ],
 })
 export class AppModule {}

@@ -41,6 +41,14 @@ export class Conversation {
   @Column({ name: 'assigned_to', type: 'varchar', nullable: true })
   assignedTo: string | null;
 
+  /** ID externo do thread/conversa no provedor (ex: Gmail threadId, Outlook conversationId) */
+  @Column({ name: 'external_id', type: 'varchar', nullable: true })
+  externalId: string | null;
+
+  /** Assunto do email (para canais de tipo email) */
+  @Column({ type: 'varchar', nullable: true })
+  subject: string | null;
+
   @ManyToOne(() => Contact, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'contact_id' })
   contact: Contact;

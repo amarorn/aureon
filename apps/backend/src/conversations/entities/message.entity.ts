@@ -38,6 +38,14 @@ export class Message {
   @Column({ type: 'uuid', name: 'template_id', nullable: true })
   templateId: string | null;
 
+  /** ID da mensagem no provedor externo (ex: Gmail messageId, Outlook id) — evita duplicatas no sync */
+  @Column({ name: 'external_id', type: 'varchar', nullable: true })
+  externalId: string | null;
+
+  /** Metadados específicos do canal (subject, from, to, cc, replyTo, etc.) */
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, unknown> | null;
+
   @ManyToOne(() => Conversation, (conv) => conv.messages, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'conversation_id' })
   conversation: Conversation;
