@@ -37,7 +37,13 @@ const GOOGLE_SCOPES: Record<string, string[]> = {
 
 const MICROSOFT_OAUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
 const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
-const OUTLOOK_SCOPES = 'Mail.Read Mail.Send offline_access User.Read';
+const OUTLOOK_SCOPES =
+  'Mail.Read Mail.Send Calendars.ReadWrite offline_access User.Read';
+
+const TIKTOK_AUTH_URL = 'https://business-api.tiktok.com/portal/auth';
+const TIKTOK_TOKEN_URL = 'https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/';
+const RD_STATION_AUTH_URL = 'https://api.rd.services/auth/dialog';
+const RD_STATION_TOKEN_URL = 'https://api.rd.services/auth/token';
 
 @Injectable()
 export class IntegrationService {
@@ -83,6 +89,15 @@ export class IntegrationService {
 
   private pickLinkedInCreds(oauth: TenantOAuthConfig | null): { clientId: string; clientSecret: string } | null {
     const b = oauth?.linkedin;
+    if (!b || typeof b !== 'object') return null;
+    const clientId = (b as TenantOAuthProviderConfig).clientId?.trim();
+    const clientSecret = (b as TenantOAuthProviderConfig).clientSecret?.trim();
+    if (clientId && clientSecret) return { clientId, clientSecret };
+    return null;
+  }
+
+  private pickRdStationCreds(oauth: TenantOAuthConfig | null): { clientId: string; clientSecret: string } | null {
+    const b = oauth?.rd_station;
     if (!b || typeof b !== 'object') return null;
     const clientId = (b as TenantOAuthProviderConfig).clientId?.trim();
     const clientSecret = (b as TenantOAuthProviderConfig).clientSecret?.trim();
@@ -157,6 +172,15 @@ export class IntegrationService {
     });
   }
 
+  async findTwilioByPhoneNumber(phoneNumber: string): Promise<Integration | null> {
+    return this.integrationRepo
+      .createQueryBuilder('i')
+      .where('i.provider = :provider', { provider: IntegrationProvider.TWILIO })
+      .andWhere("i.config->>'phoneNumber' = :phone", { phone: phoneNumber })
+      .andWhere("i.status = 'connected'")
+      .getOne();
+  }
+
   private getGoogleClientId(provider: IntegrationProvider): string {
     const id = this.config.get(`INTEGRATION_${provider.toUpperCase()}_CLIENT_ID`);
     return id || this.config.get('INTEGRATION_GOOGLE_CLIENT_ID') || '';
@@ -188,6 +212,10 @@ export class IntegrationService {
       clientId =
         this.pickLinkedInCreds(oauth)?.clientId ||
         this.config.get('INTEGRATION_LINKEDIN_CLIENT_ID');
+    } else if (provider === IntegrationProvider.RD_STATION) {
+      clientId =
+        this.pickRdStationCreds(oauth)?.clientId ||
+        this.config.get('INTEGRATION_RD_STATION_CLIENT_ID');
     } else if (provider === IntegrationProvider.ZOOM) {
       clientId =
         this.pickZoomCreds(oauth)?.clientId ||
@@ -196,6 +224,10 @@ export class IntegrationService {
       clientId =
         this.pickOutlookCreds(oauth)?.clientId ||
         this.config.get('INTEGRATION_OUTLOOK_CLIENT_ID');
+    } else if (provider === IntegrationProvider.TIKTOK_ADS) {
+      clientId =
+        this.pickTikTokCreds(oauth)?.appId ||
+        this.config.get('INTEGRATION_TIKTOK_ADS_APP_ID');
     }
     if (!clientId) {
       throw new BadRequestException(
@@ -263,6 +295,23 @@ export class IntegrationService {
       );
     }
 
+    if (provider === IntegrationProvider.RD_STATION) {
+      if (!clientId) {
+        throw new BadRequestException(
+          'RD Station não configurado para este tenant (oauthConfig.rd_station ou INTEGRATION_RD_STATION_CLIENT_ID).',
+        );
+      }
+      const state = Buffer.from(JSON.stringify({ tenantId, provider })).toString('base64url');
+      return (
+        RD_STATION_AUTH_URL + '?' +
+        new URLSearchParams({
+          client_id: clientId,
+          redirect_uri: redirectUri,
+          state,
+        }).toString()
+      );
+    }
+
     if (provider === IntegrationProvider.ZOOM) {
       if (!clientId) {
         throw new BadRequestException(
@@ -301,6 +350,24 @@ export class IntegrationService {
       );
     }
 
+    if (provider === IntegrationProvider.TIKTOK_ADS) {
+      if (!clientId) {
+        throw new BadRequestException(
+          'TikTok Ads não configurado (oauthConfig.tiktok_ads ou INTEGRATION_TIKTOK_ADS_APP_ID).',
+        );
+      }
+      const state = Buffer.from(JSON.stringify({ tenantId, provider })).toString('base64url');
+      // TikTok uses app_id (not client_id) in the URL
+      return (
+        TIKTOK_AUTH_URL + '?' +
+        new URLSearchParams({
+          app_id: clientId,
+          state,
+          redirect_uri: redirectUri,
+        }).toString()
+      );
+    }
+
     throw new Error(`Unknown provider: ${provider}`);
   }
 
@@ -324,10 +391,14 @@ export class IntegrationService {
       tokens = await this.exchangeFacebookCode(tenantId, code, redirectUri);
     } else if (provider === IntegrationProvider.LINKEDIN) {
       tokens = await this.exchangeLinkedInCode(tenantId, code, redirectUri);
+    } else if (provider === IntegrationProvider.RD_STATION) {
+      tokens = await this.exchangeRdStationCode(tenantId, code, redirectUri);
     } else if (provider === IntegrationProvider.ZOOM) {
       tokens = await this.exchangeZoomCode(tenantId, code, redirectUri);
     } else if (provider === IntegrationProvider.OUTLOOK) {
       tokens = await this.exchangeOutlookCode(tenantId, code, redirectUri);
+    } else if (provider === IntegrationProvider.TIKTOK_ADS) {
+      tokens = await this.exchangeTikTokCode(tenantId, code, redirectUri);
     } else {
       throw new Error(`Unknown provider: ${provider}`);
     }
@@ -473,6 +544,42 @@ export class IntegrationService {
     return json;
   }
 
+  private async exchangeRdStationCode(
+    tenantId: string,
+    code: string,
+    redirectUri: string,
+  ): Promise<Record<string, unknown>> {
+    const oauth = await this.loadTenantOAuth(tenantId);
+    const picked = this.pickRdStationCreds(oauth);
+    const clientId = picked?.clientId || this.config.get('INTEGRATION_RD_STATION_CLIENT_ID');
+    const clientSecret =
+      picked?.clientSecret || this.config.get('INTEGRATION_RD_STATION_CLIENT_SECRET');
+    if (!clientId || !clientSecret) {
+      throw new Error('RD Station OAuth not configured');
+    }
+
+    const res = await fetch(RD_STATION_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`RD Station token exchange failed: ${err}`);
+    }
+    const json = (await res.json()) as Record<string, unknown>;
+    const expiresIn = json.expires_in;
+    if (typeof expiresIn === 'number') {
+      json.expiry_date = Date.now() + expiresIn * 1000;
+    }
+    return json;
+  }
+
   private async exchangeZoomCode(
     tenantId: string,
     code: string,
@@ -511,6 +618,15 @@ export class IntegrationService {
     return json;
   }
 
+  private pickTikTokCreds(oauth: TenantOAuthConfig | null): { appId: string; appSecret: string } | null {
+    const b = oauth?.tiktok_ads;
+    if (!b || typeof b !== 'object') return null;
+    const appId = (b as TenantOAuthProviderConfig).appId?.trim() || (b as TenantOAuthProviderConfig).clientId?.trim();
+    const appSecret = (b as TenantOAuthProviderConfig).appSecret?.trim() || (b as TenantOAuthProviderConfig).clientSecret?.trim();
+    if (appId && appSecret) return { appId, appSecret };
+    return null;
+  }
+
   private async exchangeOutlookCode(
     tenantId: string,
     code: string,
@@ -546,6 +662,39 @@ export class IntegrationService {
       json.expiry_date = Date.now() + expiresIn * 1000;
     }
     return json;
+  }
+
+  private async exchangeTikTokCode(
+    tenantId: string,
+    authCode: string,
+    _redirectUri: string,
+  ): Promise<Record<string, unknown>> {
+    const oauth = await this.loadTenantOAuth(tenantId);
+    const picked = this.pickTikTokCreds(oauth);
+    const appId = picked?.appId || this.config.get('INTEGRATION_TIKTOK_ADS_APP_ID');
+    const secret = picked?.appSecret || this.config.get('INTEGRATION_TIKTOK_ADS_APP_SECRET');
+    if (!appId || !secret) throw new Error('TikTok Ads OAuth not configured');
+
+    const res = await fetch(TIKTOK_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ app_id: appId, secret, auth_code: authCode }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`TikTok token exchange failed: ${err}`);
+    }
+    const json = (await res.json()) as { code: number; message: string; data: Record<string, unknown> };
+    if (json.code !== 0) throw new Error(`TikTok token error: ${json.message}`);
+    // TikTok returns: { access_token, advertiser_ids, scope }
+    const data = json.data;
+    return {
+      access_token: data.access_token,
+      advertiser_ids: data.advertiser_ids,
+      scope: data.scope,
+      app_id: appId,
+      expiry_date: Date.now() + 365 * 24 * 3600 * 1000, // TikTok tokens are long-lived (1 year)
+    };
   }
 
   async refreshOutlookAccessToken(
@@ -605,6 +754,36 @@ export class IntegrationService {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json() as Promise<{ access_token: string; expires_in?: number }>;
+  }
+
+  async refreshRdStationAccessToken(
+    tenantId: string,
+    refreshToken: string,
+  ): Promise<{ access_token: string; refresh_token?: string; expires_in?: number }> {
+    const oauth = await this.loadTenantOAuth(tenantId);
+    const picked = this.pickRdStationCreds(oauth);
+    const clientId = picked?.clientId || this.config.get('INTEGRATION_RD_STATION_CLIENT_ID');
+    const clientSecret =
+      picked?.clientSecret || this.config.get('INTEGRATION_RD_STATION_CLIENT_SECRET');
+    if (!clientId || !clientSecret) {
+      throw new Error('RD Station OAuth not configured for refresh');
+    }
+
+    const res = await fetch(RD_STATION_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        refresh_token: refreshToken,
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json() as Promise<{
+      access_token: string;
+      refresh_token?: string;
+      expires_in?: number;
+    }>;
   }
 
   async updateCredentials(
