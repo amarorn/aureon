@@ -16,12 +16,14 @@ import { WhatsAppService } from './whatsapp.service';
 import { AsaasService } from './asaas.service';
 import { MercadoPagoService } from './mercadopago.service';
 import { StripeService } from './stripe.service';
+import { TwilioService } from './twilio.service';
 import { CreateIntegrationDto } from './dto/create-integration.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
 import { IntegrationProvider } from './entities/integration.entity';
 import { EmailDeliveryService } from './email-delivery.service';
 import { ProposalSignatureService } from './proposal-signature.service';
+import { TeamNotificationService } from './team-notification.service';
 
 @Controller('integrations')
 export class IntegrationController {
@@ -31,8 +33,10 @@ export class IntegrationController {
     private readonly asaas: AsaasService,
     private readonly mercadopago: MercadoPagoService,
     private readonly stripe: StripeService,
+    private readonly twilio: TwilioService,
     private readonly emailDelivery: EmailDeliveryService,
     private readonly proposalSignature: ProposalSignatureService,
+    private readonly teamNotifications: TeamNotificationService,
   ) {}
 
   @Post()
