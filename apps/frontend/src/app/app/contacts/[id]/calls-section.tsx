@@ -11,6 +11,7 @@ interface Call {
   status: string;
   durationSeconds: number | null;
   startedAt: string;
+  recordingUrl?: string | null;
 }
 
 export function CallsSection({ contactId }: { contactId: string }) {
@@ -35,13 +36,25 @@ export function CallsSection({ contactId }: { contactId: string }) {
         ) : (
           <ul className="space-y-2">
             {callList.map((c: Call) => (
-              <li key={c.id} className="flex justify-between text-sm">
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span>
                   {c.phoneNumber} · {c.direction} · {c.status}
                   {c.durationSeconds != null && ` (${c.durationSeconds}s)`}
                 </span>
-                <span className="text-muted-foreground">
-                  {new Date(c.startedAt).toLocaleDateString("pt-BR")}
+                <span className="flex items-center gap-2">
+                  {c.recordingUrl && (
+                    <a
+                      href={c.recordingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-xs"
+                    >
+                      Gravação
+                    </a>
+                  )}
+                  <span className="text-muted-foreground">
+                    {new Date(c.startedAt).toLocaleDateString("pt-BR")}
+                  </span>
                 </span>
               </li>
             ))}

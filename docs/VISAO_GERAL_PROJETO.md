@@ -135,15 +135,26 @@ Comando para subir: `docker compose up -d postgres redis`
   - Stripe: clientes internacionais (USD)
   - Entidade Payment + API GET /payments?opportunityId= e ?pipelineId=
 - [x] WhatsApp (status, config, mensagens, templates)
-- [x] Google Calendar (appointments)
+- [x] Google Calendar e Microsoft 365 / Outlook Calendar (appointments, sync, import, opção Teams)
 - [x] Email Marketing (campanhas, templates)
 - [x] Reputação (review requests)
 - [x] Propostas comerciais
 - [x] UI de integrações em `/app/integrations`
 - [ ] Zoom/Meet – reunião ao agendar (roadmap)
 
+### Telefonia (Twilio)
+- [x] **Twilio** – SMS + VoIP com provedor real
+  - Config por tenant: Account SID, Auth Token, número Twilio (E.164)
+  - Ligação outbound: Twilio liga para o contato; ao atender, conecta ao número do agente (TwiML Dial)
+  - Gravação: `Record=true`; URL da gravação no callback de status e no registro da chamada
+  - Transcrição: parâmetro `Transcribe` disponível na criação da chamada
+  - Webhooks: `GET /telephony/twilio/connect?callId=` (TwiML), `POST /telephony/twilio/status` (atualiza Call), `POST /telephony/twilio/inbound-sms` (SMS recebido)
+  - SMS: `POST /integrations/twilio/sms` (enviar); inbound persiste em `sms_messages`
+  - Entidade `SmsMessage`: tenantId, contactId, phoneNumber, direction, body, externalSid
+  - Em produção, configurar `API_BASE_URL` para a URL pública para os webhooks Twilio
+
 ### Módulos Adicionais
-- [x] **Calendar** – appointments, sync Google Calendar
+- [x] **Calendar** – appointments, sync/import Google Calendar e Outlook (Microsoft 365), opção reunião Teams
 - [x] **Email Marketing** – campanhas, templates, envio
 - [x] **Reputation** – solicitação de avaliações
 - [x] **Proposals** – propostas comerciais com itens

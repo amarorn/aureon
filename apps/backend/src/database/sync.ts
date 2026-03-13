@@ -34,6 +34,7 @@ import { ReviewRequest } from '../reputation/entities/review-request.entity';
 import { Proposal } from '../proposals/entities/proposal.entity';
 import { ProposalItem } from '../proposals/entities/proposal-item.entity';
 import { Payment } from '../payments/entities/payment.entity';
+import { SmsMessage } from '../telephony/entities/sms-message.entity';
 
 const entities = [
   Tenant,
@@ -62,6 +63,7 @@ const entities = [
   Proposal,
   ProposalItem,
   Payment,
+  SmsMessage,
 ];
 
 async function sync() {

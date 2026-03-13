@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CallService } from './call.service';
+import { TwilioCallService } from './twilio-call.service';
 import { CreateCallDto } from './dto/create-call.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
@@ -16,11 +17,35 @@ import { TenantGuard } from '../common/guards/tenant.guard';
 @Controller('calls')
 @UseGuards(TenantGuard)
 export class CallController {
-  constructor(private readonly callService: CallService) {}
+  constructor(
+    private readonly callService: CallService,
+    private readonly twilioCall: TwilioCallService,
+  ) {}
 
   @Post()
   create(@TenantId() tenantId: string, @Body() dto: CreateCallDto) {
     return this.callService.create(tenantId, dto);
+  }
+
+  @Post('initiate')
+  async initiateTwilioCall(
+    @TenantId() tenantId: string,
+    @Body()
+    body: {
+      contactId: string;
+      to: string;
+      agentPhoneNumber: string;
+      record?: boolean;
+      transcribe?: boolean;
+    },
+  ) {
+    return this.twilioCall.initiateCall(tenantId, {
+      contactId: body.contactId,
+      to: body.to,
+      agentPhoneNumber: body.agentPhoneNumber,
+      record: body.record,
+      transcribe: body.transcribe,
+    });
   }
 
   @Get()

@@ -58,6 +58,18 @@ export class Call {
   @Column({ name: 'ended_at', type: 'timestamp', nullable: true })
   endedAt: Date | null;
 
+  @Column({ name: 'external_sid', type: 'varchar', length: 64, nullable: true })
+  externalSid: string | null;
+
+  @Column({ name: 'recording_url', type: 'text', nullable: true })
+  recordingUrl: string | null;
+
+  @Column({ name: 'transcription_text', type: 'text', nullable: true })
+  transcriptionText: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, unknown> | null;
+
   @Column({ type: 'text', nullable: true })
   notes: string;
 
