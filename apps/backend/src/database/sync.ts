@@ -33,6 +33,7 @@ import { EmailTemplate } from '../email-marketing/entities/email-template.entity
 import { ReviewRequest } from '../reputation/entities/review-request.entity';
 import { Proposal } from '../proposals/entities/proposal.entity';
 import { ProposalItem } from '../proposals/entities/proposal-item.entity';
+import { Payment } from '../payments/entities/payment.entity';
 
 const entities = [
   Tenant,
@@ -60,6 +61,7 @@ const entities = [
   ReviewRequest,
   Proposal,
   ProposalItem,
+  Payment,
 ];
 
 async function sync() {

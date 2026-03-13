@@ -11,6 +11,7 @@ import { AutomationModule } from './automation/automation.module';
 import { EventsModule } from './common/events/events.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { PaymentsModule } from './payments/payments.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { EmailMarketingModule } from './email-marketing/email-marketing.module';
 import { ReputationModule } from './reputation/reputation.module';
@@ -56,6 +57,7 @@ import { BusinessModule } from './business/business.module';
     AutomationModule,
     DashboardModule,
     IntegrationsModule,
+    PaymentsModule,
     CalendarModule,
     EmailMarketingModule,
     ReputationModule,
