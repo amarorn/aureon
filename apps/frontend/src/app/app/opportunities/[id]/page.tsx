@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,37 +15,61 @@ import {
   AlertCircle,
   ExternalLink,
   Copy,
+  Receipt,
 } from "lucide-react";
 
 type BillingType = "PIX" | "BOLETO" | "CREDIT_CARD";
+type PaymentProvider = "asaas" | "mercadopago" | "stripe";
 
-interface AsaasCharge {
+interface Payment {
   id: string;
-  status: string;
+  opportunityId: string;
+  provider: PaymentProvider;
+  externalId: string;
   value: number;
-  dueDate: string;
-  billingType: string;
-  invoiceUrl?: string;
-  bankSlipUrl?: string;
-  pixQrCodeUrl?: string;
+  currency: string;
+  status: string;
+  paymentUrl: string | null;
+  createdAt: string;
 }
 
-// ── Asaas Charge Modal ─────────────────────────────────────────────────────
-function AsaasChargeModal({
+interface ProviderStatus {
+  asaas: boolean;
+  mercadopago: boolean;
+  stripe: boolean;
+}
+
+function providerLabel(p: PaymentProvider): string {
+  if (p === "asaas") return "Asaas";
+  if (p === "mercadopago") return "Mercado Pago";
+  return "Stripe";
+}
+
+// ── Create Payment Modal (unified: Asaas, Mercado Pago, Stripe) ────────────
+function CreatePaymentModal({
+  opportunityId,
   opportunityTitle,
   opportunityValue,
   contactName,
+  providers,
   onClose,
+  onSuccess,
 }: {
+  opportunityId: string;
   opportunityTitle: string;
   opportunityValue: number;
   contactName?: string;
+  providers: ProviderStatus;
   onClose: () => void;
+  onSuccess: () => void;
 }) {
   const today = new Date();
   today.setDate(today.getDate() + 3);
   const defaultDue = today.toISOString().split("T")[0];
 
+  const [provider, setProvider] = useState<PaymentProvider>(
+    providers.mercadopago ? "mercadopago" : providers.asaas ? "asaas" : "stripe"
+  );
   const [form, setForm] = useState({
     customerName: contactName ?? "",
     customerEmail: "",
@@ -54,27 +78,40 @@ function AsaasChargeModal({
     dueDate: defaultDue,
     description: opportunityTitle,
     billingType: "PIX" as BillingType,
+    currency: providers.stripe ? "usd" : "BRL",
   });
-  const [charge, setCharge] = useState<AsaasCharge | null>(null);
+  const [payment, setPayment] = useState<Payment | null>(null);
   const [copied, setCopied] = useState(false);
+  const queryClient = useQueryClient();
 
   const createMutation = useMutation({
     mutationFn: () =>
-      fetch(`${API_URL}/integrations/asaas/charges`, {
+      fetch(`${API_URL}/payments`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify({
-          ...form,
+          provider,
+          opportunityId,
+          customerName: form.customerName,
+          customerEmail: form.customerEmail || undefined,
+          customerCpfCnpj: form.customerCpfCnpj || undefined,
           value: parseFloat(form.value),
+          dueDate: form.dueDate,
+          description: form.description,
+          billingType: provider === "asaas" ? form.billingType : undefined,
+          currency: provider === "stripe" ? form.currency : undefined,
         }),
       }).then((r) => r.json()),
     onSuccess: (data) => {
-      if (data?.charge) setCharge(data.charge);
+      if (data?.payment) {
+        setPayment(data.payment);
+        queryClient.invalidateQueries({ queryKey: ["payments", opportunityId] });
+        onSuccess();
+      }
     },
   });
 
-  const paymentUrl =
-    charge?.invoiceUrl ?? charge?.bankSlipUrl ?? charge?.pixQrCodeUrl ?? null;
+  const paymentUrl = payment?.paymentUrl ?? null;
 
   function copyLink() {
     if (paymentUrl) {
@@ -84,10 +121,33 @@ function AsaasChargeModal({
     }
   }
 
+  const availableProviders = (
+    [
+      { id: "mercadopago" as const, name: "Mercado Pago", connected: providers.mercadopago },
+      { id: "asaas" as const, name: "Asaas", connected: providers.asaas },
+      { id: "stripe" as const, name: "Stripe", connected: providers.stripe },
+    ].filter((p) => p.connected)
+  );
+
+  if (availableProviders.length === 0) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="glass-card rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Nenhum gateway de pagamento configurado. Configure Mercado Pago, Asaas ou Stripe em{" "}
+            <Link href="/app/integrations" className="text-primary hover:underline">Integrações</Link>.
+          </p>
+          <Button variant="outline" size="sm" onClick={onClose} className="w-full">
+            Fechar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="glass-card rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md">
@@ -106,14 +166,35 @@ function AsaasChargeModal({
           </button>
         </div>
 
-        {!charge ? (
+        {!payment ? (
           <>
-            {/* Form */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1">Gateway</label>
+              <div className="flex gap-2 flex-wrap">
+                {availableProviders.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setProvider(p.id)}
+                    className={`h-9 px-3 rounded-xl text-xs font-medium transition-all border ${
+                      provider === p.id
+                        ? "gradient-primary text-white border-primary/30"
+                        : "border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-3">
               {[
                 { key: "customerName", label: "Nome do cliente", placeholder: "João Silva" },
                 { key: "customerEmail", label: "E-mail (opcional)", placeholder: "joao@empresa.com" },
-                { key: "customerCpfCnpj", label: "CPF/CNPJ (opcional)", placeholder: "000.000.000-00" },
+                ...(provider === "asaas"
+                  ? [{ key: "customerCpfCnpj", label: "CPF/CNPJ (opcional)", placeholder: "000.000.000-00" }]
+                  : []),
                 { key: "description", label: "Descrição", placeholder: "Referente a..." },
               ].map(({ key, label, placeholder }) => (
                 <div key={key}>
@@ -129,7 +210,9 @@ function AsaasChargeModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Valor (R$)</label>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">
+                    Valor ({provider === "stripe" ? "USD" : "R$"})
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -139,36 +222,40 @@ function AsaasChargeModal({
                     className="w-full h-9 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Vencimento</label>
-                  <input
-                    type="date"
-                    value={form.dueDate}
-                    onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
-                    className="w-full h-9 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
-                  />
-                </div>
+                {provider === "asaas" && (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Vencimento</label>
+                    <input
+                      type="date"
+                      value={form.dueDate}
+                      onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))}
+                      className="w-full h-9 rounded-xl border border-border bg-background/50 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Forma de pagamento</label>
-                <div className="flex gap-2">
-                  {(["PIX", "BOLETO", "CREDIT_CARD"] as BillingType[]).map((bt) => (
-                    <button
-                      key={bt}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, billingType: bt }))}
-                      className={`flex-1 h-9 rounded-xl text-xs font-medium transition-all border ${
-                        form.billingType === bt
-                          ? "gradient-primary text-white border-primary/30 shadow-sm"
-                          : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
-                      }`}
-                    >
-                      {bt === "CREDIT_CARD" ? "Cartão" : bt}
-                    </button>
-                  ))}
+              {provider === "asaas" && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground block mb-1">Forma de pagamento</label>
+                  <div className="flex gap-2">
+                    {(["PIX", "BOLETO", "CREDIT_CARD"] as BillingType[]).map((bt) => (
+                      <button
+                        key={bt}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, billingType: bt }))}
+                        className={`flex-1 h-9 rounded-xl text-xs font-medium transition-all border ${
+                          form.billingType === bt
+                            ? "gradient-primary text-white border-primary/30"
+                            : "border-border text-muted-foreground hover:bg-accent"
+                        }`}
+                      >
+                        {bt === "CREDIT_CARD" ? "Cartão" : bt}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {createMutation.data?.error && (
@@ -199,7 +286,6 @@ function AsaasChargeModal({
             </div>
           </>
         ) : (
-          /* Success state */
           <div className="space-y-4">
             <div className="flex flex-col items-center gap-3 py-4 text-center">
               <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
@@ -208,8 +294,11 @@ function AsaasChargeModal({
               <div>
                 <p className="font-semibold text-foreground">Cobrança criada!</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(charge.value)}
-                  {" · "}Vence em {new Date(charge.dueDate + "T12:00:00").toLocaleDateString("pt-BR")}
+                  {new Intl.NumberFormat(
+                    payment.currency === "BRL" ? "pt-BR" : "en-US",
+                    { style: "currency", currency: payment.currency }
+                  ).format(payment.value)}
+                  {" · "}{providerLabel(payment.provider)}
                 </p>
               </div>
             </div>
@@ -261,13 +350,24 @@ export default function OpportunityDetailPage() {
       ),
   });
 
-  const { data: asaasStatus } = useQuery({
-    queryKey: ["asaas-status"],
+  const { data: providerStatus } = useQuery({
+    queryKey: ["payments-providers"],
     queryFn: () =>
-      fetch(`${API_URL}/integrations/asaas/status`, { headers: apiHeaders })
-        .then((r) => (r.ok ? r.json() : { connected: false })),
+      fetch(`${API_URL}/payments/providers`, { headers: apiHeaders })
+        .then((r) => (r.ok ? r.json() : { asaas: false, mercadopago: false, stripe: false })),
     staleTime: 60_000,
   });
+
+  const { data: payments = [] } = useQuery({
+    queryKey: ["payments", id],
+    queryFn: () =>
+      fetch(`${API_URL}/payments?opportunityId=${id}`, { headers: apiHeaders })
+        .then((r) => (r.ok ? r.json() : [])),
+    enabled: !!id,
+  });
+
+  const hasProvider =
+    providerStatus?.asaas || providerStatus?.mercadopago || providerStatus?.stripe;
 
   if (isLoading) return <p className="p-8">Carregando...</p>;
   if (error || !data)
@@ -276,11 +376,14 @@ export default function OpportunityDetailPage() {
   return (
     <div className="space-y-8">
       {showCharge && (
-        <AsaasChargeModal
+        <CreatePaymentModal
+          opportunityId={id}
           opportunityTitle={data.title}
           opportunityValue={Number(data.value || 0)}
           contactName={data.contact?.name}
+          providers={providerStatus ?? { asaas: false, mercadopago: false, stripe: false }}
           onClose={() => setShowCharge(false)}
+          onSuccess={() => {}}
         />
       )}
 
@@ -288,7 +391,7 @@ export default function OpportunityDetailPage() {
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           Voltar
         </Button>
-        {asaasStatus?.connected && (
+        {hasProvider && (
           <Button
             size="sm"
             onClick={() => setShowCharge(true)}
@@ -325,6 +428,48 @@ export default function OpportunityDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {payments.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-semibold">Cobranças e pagamentos</h2>
+            </div>
+            <div className="space-y-3">
+              {payments.map((p: Payment) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between rounded-xl border border-border bg-background/30 px-4 py-3"
+                >
+                  <div>
+                    <p className="font-medium text-sm">
+                      {new Intl.NumberFormat(
+                        p.currency === "BRL" ? "pt-BR" : "en-US",
+                        { style: "currency", currency: p.currency }
+                      ).format(p.value)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {providerLabel(p.provider)} · {p.status} · {new Date(p.createdAt).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  {p.paymentUrl && (
+                    <a
+                      href={p.paymentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Abrir
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
