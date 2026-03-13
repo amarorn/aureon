@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EmailCampaign } from './entities/email-campaign.entity';
 import { EmailCampaignRecipient } from './entities/email-campaign-recipient.entity';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
+import { Contact } from '../crm/entities';
+import { EmailDeliveryService } from '../integrations/email-delivery.service';
 
 @Injectable()
 export class EmailCampaignService {
@@ -12,6 +18,9 @@ export class EmailCampaignService {
     private readonly campaignRepo: Repository<EmailCampaign>,
     @InjectRepository(EmailCampaignRecipient)
     private readonly recipientRepo: Repository<EmailCampaignRecipient>,
+    @InjectRepository(Contact)
+    private readonly contactRepo: Repository<Contact>,
+    private readonly emailDelivery: EmailDeliveryService,
   ) {}
 
   async create(tenantId: string, dto: CreateCampaignDto) {
@@ -27,13 +36,12 @@ export class EmailCampaignService {
     });
     const saved = await this.campaignRepo.save(campaign);
 
-    // Create recipients from contactIds if provided
     if (dto.contactIds?.length) {
       const recipients = dto.contactIds.map((cId) =>
         this.recipientRepo.create({
           campaignId: saved.id,
           contactId: cId,
-          email: '',  // will be resolved on send
+          email: '',
           status: 'pending',
         }),
       );
@@ -59,16 +67,66 @@ export class EmailCampaignService {
 
   async send(tenantId: string, id: string) {
     const campaign = await this.findOne(tenantId, id);
-    // Mark as sending → simulate send → mark as sent
+    const recipients = await this.recipientRepo.find({
+      where: { campaignId: id },
+      order: { createdAt: 'ASC' },
+    });
+    if (!recipients.length) {
+      throw new BadRequestException('A campanha não possui destinatários');
+    }
+
     await this.campaignRepo.update(id, { status: 'sending' });
-    await this.recipientRepo.update(
-      { campaignId: id },
-      { status: 'sent', sentAt: new Date() },
+
+    const contacts = await this.loadContactsByIds(
+      tenantId,
+      recipients
+        .map((recipient) => recipient.contactId)
+        .filter((contactId): contactId is string => !!contactId),
     );
-    const sentCount = await this.recipientRepo.count({ where: { campaignId: id } });
+
+    let sentCount = 0;
+    for (const recipient of recipients) {
+      const contact = recipient.contactId ? contacts.get(recipient.contactId) : null;
+      const email = recipient.email?.trim() || contact?.email?.trim() || '';
+      const contactName = recipient.contactName?.trim() || contact?.name?.trim() || null;
+
+      if (!email) {
+        await this.recipientRepo.update(recipient.id, {
+          status: 'failed',
+          contactName,
+          email: recipient.email || '',
+        });
+        continue;
+      }
+
+      try {
+        await this.emailDelivery.send(tenantId, {
+          to: email,
+          subject: this.renderTemplate(campaign.subject, contact, contactName, email),
+          html: this.renderTemplate(campaign.bodyHtml, contact, contactName, email),
+          fromEmail: campaign.fromEmail,
+          fromName: campaign.fromName,
+        });
+
+        sentCount += 1;
+        await this.recipientRepo.update(recipient.id, {
+          email,
+          contactName,
+          status: 'sent',
+          sentAt: new Date(),
+        });
+      } catch {
+        await this.recipientRepo.update(recipient.id, {
+          email,
+          contactName,
+          status: 'failed',
+        });
+      }
+    }
+
     await this.campaignRepo.update(id, {
       status: 'sent',
-      sentAt: new Date(),
+      sentAt: sentCount > 0 ? new Date() : null,
       sentCount,
     });
     return this.findOne(tenantId, id);
@@ -95,18 +153,58 @@ export class EmailCampaignService {
     return this.recipientRepo.find({ where: { campaignId }, order: { createdAt: 'DESC' } });
   }
 
-  async addRecipient(tenantId: string, campaignId: string, email: string, contactId?: string, contactName?: string) {
+  async addRecipient(
+    tenantId: string,
+    campaignId: string,
+    email: string,
+    contactId?: string,
+    contactName?: string,
+  ) {
     await this.findOne(tenantId, campaignId);
     const recipient = this.recipientRepo.create({
       campaignId,
-      email,
+      email: email.trim(),
       contactId: contactId ?? null,
-      contactName: contactName ?? null,
+      contactName: contactName?.trim() || null,
       status: 'pending',
     });
     const saved = await this.recipientRepo.save(recipient);
     const count = await this.recipientRepo.count({ where: { campaignId } });
     await this.campaignRepo.update(campaignId, { recipientCount: count });
     return saved;
+  }
+
+  private async loadContactsByIds(
+    tenantId: string,
+    contactIds: string[],
+  ): Promise<Map<string, Contact>> {
+    if (!contactIds.length) return new Map();
+
+    const contacts = await this.contactRepo.find({
+      where: { tenantId, id: In(contactIds) },
+    });
+    return new Map(contacts.map((contact) => [contact.id, contact]));
+  }
+
+  private renderTemplate(
+    content: string,
+    contact: Contact | null | undefined,
+    fallbackName: string | null,
+    fallbackEmail: string,
+  ): string {
+    const variables: Record<string, string> = {
+      nome: contact?.name || fallbackName || '',
+      name: contact?.name || fallbackName || '',
+      email: contact?.email || fallbackEmail || '',
+      telefone: contact?.phone || '',
+      phone: contact?.phone || '',
+      empresa: contact?.company || '',
+      company: contact?.company || '',
+    };
+
+    return content.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, rawKey: string) => {
+      const key = rawKey.toLowerCase();
+      return variables[key] ?? '';
+    });
   }
 }

@@ -7,10 +7,18 @@ import { EmailCampaignService } from './email-campaign.service';
 import { EmailTemplateService } from './email-template.service';
 import { EmailCampaignController } from './email-campaign.controller';
 import { EmailTemplateController } from './email-template.controller';
+import { Contact } from '../crm/entities';
+import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EmailCampaign, EmailCampaignRecipient, EmailTemplate]),
+    TypeOrmModule.forFeature([
+      EmailCampaign,
+      EmailCampaignRecipient,
+      EmailTemplate,
+      Contact,
+    ]),
+    IntegrationsModule,
   ],
   providers: [EmailCampaignService, EmailTemplateService],
   controllers: [EmailCampaignController, EmailTemplateController],
