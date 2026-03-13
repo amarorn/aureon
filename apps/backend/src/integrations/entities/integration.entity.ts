@@ -14,8 +14,17 @@ export enum IntegrationProvider {
   GOOGLE_CALENDAR = 'google_calendar',
   WHATSAPP = 'whatsapp',
   ASAAS = 'asaas',
+  MERCADOPAGO = 'mercadopago',
+  STRIPE = 'stripe',
   LINKEDIN = 'linkedin',
   ZOOM = 'zoom',
+  SENDGRID = 'sendgrid',
+  AMAZON_SES = 'amazon_ses',
+  CLICKSIGN = 'clicksign',
+  DOCUSIGN = 'docusign',
+  GMAIL = 'gmail',
+  OUTLOOK = 'outlook',
+  INSTAGRAM = 'instagram',
 }
 
 @Entity('integrations')

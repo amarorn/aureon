@@ -14,10 +14,14 @@ import type { Response } from 'express';
 import { IntegrationService } from './integration.service';
 import { WhatsAppService } from './whatsapp.service';
 import { AsaasService } from './asaas.service';
+import { MercadoPagoService } from './mercadopago.service';
+import { StripeService } from './stripe.service';
 import { CreateIntegrationDto } from './dto/create-integration.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
 import { IntegrationProvider } from './entities/integration.entity';
+import { EmailDeliveryService } from './email-delivery.service';
+import { ProposalSignatureService } from './proposal-signature.service';
 
 @Controller('integrations')
 export class IntegrationController {
@@ -25,6 +29,10 @@ export class IntegrationController {
     private readonly integrationService: IntegrationService,
     private readonly whatsApp: WhatsAppService,
     private readonly asaas: AsaasService,
+    private readonly mercadopago: MercadoPagoService,
+    private readonly stripe: StripeService,
+    private readonly emailDelivery: EmailDeliveryService,
+    private readonly proposalSignature: ProposalSignatureService,
   ) {}
 
   @Post()
@@ -179,6 +187,172 @@ export class IntegrationController {
   @UseGuards(TenantGuard)
   getCharge(@TenantId() tenantId: string, @Param('chargeId') chargeId: string) {
     return this.asaas.getCharge(tenantId, chargeId);
+  }
+
+  // ── Mercado Pago ───────────────────────────────────────────────────────
+
+  @Get('mercadopago/status')
+  @UseGuards(TenantGuard)
+  async mercadopagoStatus(@TenantId() tenantId: string) {
+    const connected = await this.mercadopago.isConnected(tenantId);
+    return { connected };
+  }
+
+  @Post('mercadopago/config')
+  @UseGuards(TenantGuard)
+  async saveMercadoPagoConfig(
+    @TenantId() tenantId: string,
+    @Body() body: { accessToken: string },
+  ) {
+    await this.mercadopago.saveConfig(tenantId, body.accessToken);
+    return { ok: true };
+  }
+
+  // ── Stripe ─────────────────────────────────────────────────────────────
+
+  @Get('stripe/status')
+  @UseGuards(TenantGuard)
+  async stripeStatus(@TenantId() tenantId: string) {
+    const connected = await this.stripe.isConnected(tenantId);
+    return { connected };
+  }
+
+  @Post('stripe/config')
+  @UseGuards(TenantGuard)
+  async saveStripeConfig(
+    @TenantId() tenantId: string,
+    @Body() body: { secretKey: string },
+  ) {
+    await this.stripe.saveConfig(tenantId, body.secretKey);
+    return { ok: true };
+  }
+
+  // ── Email providers ───────────────────────────────────────────────────────
+
+  @Get('sendgrid/status')
+  @UseGuards(TenantGuard)
+  async sendGridStatus(@TenantId() tenantId: string) {
+    const connected = await this.emailDelivery.isConnected(
+      tenantId,
+      IntegrationProvider.SENDGRID,
+    );
+    return { connected };
+  }
+
+  @Post('sendgrid/config')
+  @UseGuards(TenantGuard)
+  async saveSendGridConfig(
+    @TenantId() tenantId: string,
+    @Body()
+    body: {
+      apiKey: string;
+      fromEmail?: string;
+      fromName?: string;
+      replyToEmail?: string;
+    },
+  ) {
+    await this.emailDelivery.saveSendGridConfig(tenantId, body);
+    return { ok: true };
+  }
+
+  @Get('amazon-ses/status')
+  @UseGuards(TenantGuard)
+  async amazonSesStatus(@TenantId() tenantId: string) {
+    const connected = await this.emailDelivery.isConnected(
+      tenantId,
+      IntegrationProvider.AMAZON_SES,
+    );
+    return { connected };
+  }
+
+  @Post('amazon-ses/config')
+  @UseGuards(TenantGuard)
+  async saveAmazonSesConfig(
+    @TenantId() tenantId: string,
+    @Body()
+    body: {
+      accessKeyId: string;
+      secretAccessKey: string;
+      region: string;
+      fromEmail?: string;
+      fromName?: string;
+      replyToEmail?: string;
+      configurationSetName?: string;
+    },
+  ) {
+    await this.emailDelivery.saveAmazonSesConfig(tenantId, body);
+    return { ok: true };
+  }
+
+  @Post('email/test')
+  @UseGuards(TenantGuard)
+  async sendTestEmail(
+    @TenantId() tenantId: string,
+    @Body()
+    body: {
+      to: string;
+      subject: string;
+      html: string;
+      text?: string;
+      fromEmail?: string;
+      fromName?: string;
+      replyToEmail?: string;
+    },
+  ) {
+    const delivery = await this.emailDelivery.send(tenantId, body);
+    return { ok: true, ...delivery };
+  }
+
+  // ── Signature providers ───────────────────────────────────────────────────
+
+  @Get('clicksign/status')
+  @UseGuards(TenantGuard)
+  async clickSignStatus(@TenantId() tenantId: string) {
+    const connected = await this.proposalSignature.isConnected(
+      tenantId,
+      IntegrationProvider.CLICKSIGN,
+    );
+    return { connected };
+  }
+
+  @Post('clicksign/config')
+  @UseGuards(TenantGuard)
+  async saveClickSignConfig(
+    @TenantId() tenantId: string,
+    @Body()
+    body: {
+      accessToken: string;
+      baseUrl?: string;
+    },
+  ) {
+    await this.proposalSignature.saveClickSignConfig(tenantId, body);
+    return { ok: true };
+  }
+
+  @Get('docusign/status')
+  @UseGuards(TenantGuard)
+  async docuSignStatus(@TenantId() tenantId: string) {
+    const connected = await this.proposalSignature.isConnected(
+      tenantId,
+      IntegrationProvider.DOCUSIGN,
+    );
+    return { connected };
+  }
+
+  @Post('docusign/config')
+  @UseGuards(TenantGuard)
+  async saveDocuSignConfig(
+    @TenantId() tenantId: string,
+    @Body()
+    body: {
+      accessToken: string;
+      accountId: string;
+      basePath: string;
+      returnUrl?: string;
+    },
+  ) {
+    await this.proposalSignature.saveDocuSignConfig(tenantId, body);
+    return { ok: true };
   }
 
   // ── Generic ────────────────────────────────────────────────────────────────

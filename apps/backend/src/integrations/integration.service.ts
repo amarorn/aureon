@@ -26,7 +26,18 @@ const GOOGLE_SCOPES: Record<string, string[]> = {
     'https://www.googleapis.com/auth/calendar',
     'https://www.googleapis.com/auth/calendar.events',
   ],
+  [IntegrationProvider.GMAIL]: [
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.modify',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+  ],
 };
+
+const MICROSOFT_OAUTH_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+const MICROSOFT_TOKEN_URL = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+const OUTLOOK_SCOPES = 'Mail.Read Mail.Send offline_access User.Read';
 
 @Injectable()
 export class IntegrationService {
@@ -81,6 +92,15 @@ export class IntegrationService {
 
   private pickZoomCreds(oauth: TenantOAuthConfig | null): { clientId: string; clientSecret: string } | null {
     const b = oauth?.zoom;
+    if (!b || typeof b !== 'object') return null;
+    const clientId = (b as TenantOAuthProviderConfig).clientId?.trim();
+    const clientSecret = (b as TenantOAuthProviderConfig).clientSecret?.trim();
+    if (clientId && clientSecret) return { clientId, clientSecret };
+    return null;
+  }
+
+  private pickOutlookCreds(oauth: TenantOAuthConfig | null): { clientId: string; clientSecret: string } | null {
+    const b = oauth?.outlook;
     if (!b || typeof b !== 'object') return null;
     const clientId = (b as TenantOAuthProviderConfig).clientId?.trim();
     const clientSecret = (b as TenantOAuthProviderConfig).clientSecret?.trim();
@@ -158,7 +178,8 @@ export class IntegrationService {
       provider === IntegrationProvider.GOOGLE_ANALYTICS ||
       provider === IntegrationProvider.GOOGLE_BUSINESS_PROFILE ||
       provider === IntegrationProvider.GOOGLE_ADS ||
-      provider === IntegrationProvider.GOOGLE_CALENDAR
+      provider === IntegrationProvider.GOOGLE_CALENDAR ||
+      provider === IntegrationProvider.GMAIL
     ) {
       clientId =
         this.pickGoogleCreds(oauth, provider)?.clientId ||
@@ -171,6 +192,10 @@ export class IntegrationService {
       clientId =
         this.pickZoomCreds(oauth)?.clientId ||
         this.config.get('INTEGRATION_ZOOM_CLIENT_ID');
+    } else if (provider === IntegrationProvider.OUTLOOK) {
+      clientId =
+        this.pickOutlookCreds(oauth)?.clientId ||
+        this.config.get('INTEGRATION_OUTLOOK_CLIENT_ID');
     }
     if (!clientId) {
       throw new BadRequestException(
@@ -182,7 +207,8 @@ export class IntegrationService {
       provider === IntegrationProvider.GOOGLE_ANALYTICS ||
       provider === IntegrationProvider.GOOGLE_BUSINESS_PROFILE ||
       provider === IntegrationProvider.GOOGLE_ADS ||
-      provider === IntegrationProvider.GOOGLE_CALENDAR
+      provider === IntegrationProvider.GOOGLE_CALENDAR ||
+      provider === IntegrationProvider.GMAIL
     ) {
       const scopes = GOOGLE_SCOPES[provider]?.join(' ') || '';
       const state = Buffer.from(JSON.stringify({ tenantId, provider })).toString('base64url');
@@ -255,6 +281,26 @@ export class IntegrationService {
       );
     }
 
+    if (provider === IntegrationProvider.OUTLOOK) {
+      if (!clientId) {
+        throw new BadRequestException(
+          'Outlook não configurado para este tenant (oauthConfig.outlook ou INTEGRATION_OUTLOOK_CLIENT_ID).',
+        );
+      }
+      const state = Buffer.from(JSON.stringify({ tenantId, provider })).toString('base64url');
+      return (
+        MICROSOFT_OAUTH_URL + '?' +
+        new URLSearchParams({
+          client_id: clientId,
+          response_type: 'code',
+          redirect_uri: redirectUri,
+          response_mode: 'query',
+          scope: OUTLOOK_SCOPES,
+          state,
+        }).toString()
+      );
+    }
+
     throw new Error(`Unknown provider: ${provider}`);
   }
 
@@ -270,7 +316,8 @@ export class IntegrationService {
       provider === IntegrationProvider.GOOGLE_ANALYTICS ||
       provider === IntegrationProvider.GOOGLE_BUSINESS_PROFILE ||
       provider === IntegrationProvider.GOOGLE_ADS ||
-      provider === IntegrationProvider.GOOGLE_CALENDAR
+      provider === IntegrationProvider.GOOGLE_CALENDAR ||
+      provider === IntegrationProvider.GMAIL
     ) {
       tokens = await this.exchangeGoogleCode(tenantId, provider, code, redirectUri);
     } else if (provider === IntegrationProvider.FACEBOOK_ADS) {
@@ -279,6 +326,8 @@ export class IntegrationService {
       tokens = await this.exchangeLinkedInCode(tenantId, code, redirectUri);
     } else if (provider === IntegrationProvider.ZOOM) {
       tokens = await this.exchangeZoomCode(tenantId, code, redirectUri);
+    } else if (provider === IntegrationProvider.OUTLOOK) {
+      tokens = await this.exchangeOutlookCode(tenantId, code, redirectUri);
     } else {
       throw new Error(`Unknown provider: ${provider}`);
     }
@@ -460,6 +509,70 @@ export class IntegrationService {
       json.expiry_date = Date.now() + expiresIn * 1000;
     }
     return json;
+  }
+
+  private async exchangeOutlookCode(
+    tenantId: string,
+    code: string,
+    redirectUri: string,
+  ): Promise<Record<string, unknown>> {
+    const oauth = await this.loadTenantOAuth(tenantId);
+    const picked = this.pickOutlookCreds(oauth);
+    const clientId = picked?.clientId || this.config.get('INTEGRATION_OUTLOOK_CLIENT_ID');
+    const clientSecret =
+      picked?.clientSecret || this.config.get('INTEGRATION_OUTLOOK_CLIENT_SECRET');
+    if (!clientId || !clientSecret) {
+      throw new Error('Outlook OAuth not configured');
+    }
+    const res = await fetch(MICROSOFT_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        code,
+        scope: OUTLOOK_SCOPES,
+      }).toString(),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Outlook token exchange failed: ${err}`);
+    }
+    const json = (await res.json()) as Record<string, unknown>;
+    const expiresIn = json.expires_in;
+    if (typeof expiresIn === 'number') {
+      json.expiry_date = Date.now() + expiresIn * 1000;
+    }
+    return json;
+  }
+
+  async refreshOutlookAccessToken(
+    tenantId: string,
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in?: number }> {
+    const oauth = await this.loadTenantOAuth(tenantId);
+    const picked = this.pickOutlookCreds(oauth);
+    const clientId = picked?.clientId || this.config.get('INTEGRATION_OUTLOOK_CLIENT_ID');
+    const clientSecret =
+      picked?.clientSecret || this.config.get('INTEGRATION_OUTLOOK_CLIENT_SECRET');
+    if (!clientId || !clientSecret) {
+      throw new Error('Outlook OAuth not configured for refresh');
+    }
+    const res = await fetch(MICROSOFT_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        scope: OUTLOOK_SCOPES,
+      }).toString(),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json() as Promise<{ access_token: string; expires_in?: number }>;
   }
 
   /**
