@@ -66,19 +66,31 @@ export function InboxList() {
               contact?: { name: string };
               channel?: { type: string; name: string };
               status: string;
+              subject?: string;
               updatedAt: string;
             }) => (
               <Link key={c.id} href={`/app/inbox/${c.id}`}>
                 <Card className="cursor-pointer transition-colors hover:bg-accent/50">
                   <CardContent className="flex items-center justify-between py-4">
-                    <div>
-                      <p className="font-medium">{c.contact?.name ?? "Sem contato"}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {CHANNEL_LABELS[c.channel?.type ?? "other"] ?? c.channel?.name} -{" "}
-                        {c.status === "open" ? "Aberta" : "Fechada"}
-                      </p>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{c.contact?.name ?? "Sem contato"}</p>
+                        {c.channel?.type === "email" && (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0">
+                            Email
+                          </span>
+                        )}
+                      </div>
+                      {c.subject ? (
+                        <p className="text-sm text-muted-foreground truncate">{c.subject}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          {CHANNEL_LABELS[c.channel?.type ?? "other"] ?? c.channel?.name} —{" "}
+                          {c.status === "open" ? "Aberta" : "Fechada"}
+                        </p>
+                      )}
                     </div>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-sm text-muted-foreground shrink-0 ml-3">
                       {new Date(c.updatedAt).toLocaleDateString("pt-BR")}
                     </span>
                   </CardContent>

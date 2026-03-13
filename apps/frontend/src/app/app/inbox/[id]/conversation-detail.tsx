@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Mail, ArrowLeft, RefreshCw } from "lucide-react";
 import { apiHeaders, API_URL } from "@/lib/api";
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -30,6 +32,12 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   const [attachments, setAttachments] = useState<{ url: string; filename: string }[]>([]);
   const [newAttUrl, setNewAttUrl] = useState("");
   const [newAttFilename, setNewAttFilename] = useState("");
+
+  // Email-specific state
+  const [emailTo, setEmailTo] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [emailCc, setEmailCc] = useState("");
 
   const { data: conversation, isLoading, error } = useQuery({
     queryKey: ["conversation", conversationId],
@@ -130,6 +138,35 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     },
   });
 
+  const emailSendMutation = useMutation({
+    mutationFn: (body: { to: string; subject: string; body: string; cc?: string; provider?: string }) =>
+      fetch(`${API_URL}/email-inbox/send`, {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify(body),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      setEmailBody("");
+    },
+  });
+
+  const igSendMutation = useMutation({
+    mutationFn: (text: string) =>
+      fetch(`${API_URL}/integrations/instagram/send`, {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({
+          recipientIgsid: conversation?.externalId ?? "",
+          text,
+        }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      setMessageContent("");
+    },
+  });
+
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageContent.trim()) return;
@@ -168,15 +205,27 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <div>
-            <h1 className="text-xl font-bold">
-              <Link href={`/app/contacts/${conversation.contactId}`} className="hover:underline">
-                {contact?.name ?? "Contato"}
-              </Link>
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {CHANNEL_LABELS[channel?.type ?? "other"] ?? channel?.name}
-            </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold">
+                <Link href={`/app/contacts/${conversation.contactId}`} className="hover:underline">
+                  {contact?.name ?? "Contato"}
+                </Link>
+              </h1>
+              {channel?.type === "email" && (
+                <Badge variant="outline" className="text-xs border-blue-500/30 bg-blue-500/10 text-blue-400 gap-1">
+                  <Mail className="h-3 w-3" />
+                  Email
+                </Badge>
+              )}
+            </div>
+            {conversation.subject ? (
+              <p className="text-sm text-muted-foreground truncate">{conversation.subject}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {CHANNEL_LABELS[channel?.type ?? "other"] ?? channel?.name}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span
@@ -305,6 +354,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
                   content: string;
                   direction: string;
                   createdAt: string;
+                  metadata?: Record<string, string>;
                   attachments?: { url: string; filename: string }[];
                 }) => (
                   <div
@@ -318,6 +368,13 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
                           : "bg-muted"
                       }`}
                     >
+                      {m.metadata && channel?.type === "email" && (
+                        <div className="mb-2 pb-2 border-b border-white/10 space-y-0.5 text-[11px] opacity-70">
+                          {m.metadata.from && <p><span className="font-medium">De:</span> {String(m.metadata.from)}</p>}
+                          {m.metadata.to && <p><span className="font-medium">Para:</span> {String(m.metadata.to)}</p>}
+                          {m.metadata.cc && <p><span className="font-medium">Cc:</span> {String(m.metadata.cc)}</p>}
+                        </div>
+                      )}
                       <p className="text-sm whitespace-pre-wrap">{m.content}</p>
                       {m.attachments?.length ? (
                         <div className="mt-2 space-y-1">
@@ -344,6 +401,104 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
             )}
           </div>
 
+          {channel?.type === "instagram" ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!messageContent.trim()) return;
+                igSendMutation.mutate(messageContent);
+              }}
+              className="space-y-3 pt-4 border-t"
+            >
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Responder via Instagram DM</p>
+              <textarea
+                value={messageContent}
+                onChange={(e) => setMessageContent(e.target.value)}
+                placeholder="Escreva sua mensagem direta..."
+                rows={3}
+                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              <Button
+                type="submit"
+                disabled={igSendMutation.isPending || !messageContent.trim()}
+                className="gap-2 bg-gradient-to-r from-pink-500 to-rose-600 text-white border-0 hover:opacity-90"
+              >
+                {igSendMutation.isPending ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <span className="text-xs font-bold">IG</span>
+                )}
+                Enviar DM
+              </Button>
+            </form>
+          ) : channel?.type === "email" ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!emailBody.trim()) return;
+                emailSendMutation.mutate({
+                  to: emailTo || contact?.email || "",
+                  subject: emailSubject || conversation.subject || "(sem assunto)",
+                  body: emailBody,
+                  cc: emailCc || undefined,
+                });
+              }}
+              className="space-y-3 pt-4 border-t"
+            >
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Responder por email</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Para</Label>
+                  <Input
+                    value={emailTo || contact?.email || ""}
+                    onChange={(e) => setEmailTo(e.target.value)}
+                    placeholder="destinatario@exemplo.com"
+                    className="mt-1 h-8 text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Cc</Label>
+                  <Input
+                    value={emailCc}
+                    onChange={(e) => setEmailCc(e.target.value)}
+                    placeholder="cc@exemplo.com"
+                    className="mt-1 h-8 text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Assunto</Label>
+                <Input
+                  value={emailSubject || conversation.subject || ""}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Assunto do email"
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Mensagem</Label>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Escreva sua resposta..."
+                  rows={4}
+                  className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={emailSendMutation.isPending || !emailBody.trim()}
+                className="gap-2"
+              >
+                {emailSendMutation.isPending ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Mail className="h-3.5 w-3.5" />
+                )}
+                Enviar email
+              </Button>
+            </form>
+          ) : (
           <form onSubmit={handleSend} className="space-y-3 pt-4 border-t">
             {templates.length > 0 && (
               <div>
@@ -443,6 +598,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
               Enviar
             </Button>
           </form>
+          )}
         </CardContent>
       </Card>
     </div>
