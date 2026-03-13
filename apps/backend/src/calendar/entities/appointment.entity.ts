@@ -56,8 +56,14 @@ export class Appointment {
   @Column({ name: 'google_event_id', type: 'varchar', nullable: true })
   googleEventId: string | null;
 
+  @Column({ name: 'outlook_event_id', type: 'varchar', nullable: true })
+  outlookEventId: string | null;
+
   @Column({ name: 'meeting_url', type: 'varchar', nullable: true })
   meetingUrl: string | null;
+
+  @Column({ name: 'booking_external_id', type: 'varchar', nullable: true })
+  bookingExternalId: string | null;
 
   @ManyToOne(() => Contact, { onDelete: 'SET NULL', nullable: true, eager: true })
   @JoinColumn({ name: 'contact_id' })

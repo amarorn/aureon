@@ -41,7 +41,7 @@ aureon/
 │   │       ├── analytics/    # Google Analytics
 │   │       ├── ads/          # Google Ads
 │   │       ├── business/     # Google Business Profile
-│   │       ├── calendar/     # Appointments, Google Calendar
+│   │       ├── calendar/     # Appointments, Google Calendar, Outlook Calendar
 │   │       ├── email-marketing/ # Campanhas, templates
 │   │       ├── reputation/   # Avaliações
 │   │       ├── proposals/    # Propostas comerciais

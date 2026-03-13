@@ -62,4 +62,8 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsBoolean()
   useZoomMeeting?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  addTeamsMeeting?: boolean;
 }
