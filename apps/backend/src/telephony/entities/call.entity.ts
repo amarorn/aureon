@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Contact } from '../../crm/entities/contact.entity';
 
@@ -21,6 +22,7 @@ export enum CallStatus {
   IN_PROGRESS = 'in_progress',
 }
 
+@Index(['tenantId'])
 @Entity('calls')
 export class Call {
   @PrimaryGeneratedColumn('uuid')

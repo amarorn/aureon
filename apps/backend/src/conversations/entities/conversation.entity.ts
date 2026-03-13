@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Contact } from '../../crm/entities/contact.entity';
 import { Channel } from './channel.entity';
@@ -17,6 +18,7 @@ export enum ConversationStatus {
   CLOSED = 'closed',
 }
 
+@Index(['tenantId'])
 @Entity('conversations')
 export class Conversation {
   @PrimaryGeneratedColumn('uuid')

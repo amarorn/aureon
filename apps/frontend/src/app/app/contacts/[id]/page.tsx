@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { apiHeaders, API_URL } from "@/lib/api";
+import { TelephonySmsHistory } from "@/components/telephony-sms-history";
 import { TasksSection } from "./tasks-section";
 import { CallsSection } from "./calls-section";
 import { AddToQueueButton } from "./add-to-queue-button";
@@ -356,6 +357,11 @@ export default function ContactDetailPage() {
       <div className="mt-6 space-y-6">
         <TasksSection contactId={id} />
         <CallsSection contactId={id} />
+        <TelephonySmsHistory
+          contactId={id}
+          title="SMS recebidos"
+          emptyMessage="Nenhum SMS recebido deste contato."
+        />
       </div>
     </div>
   );

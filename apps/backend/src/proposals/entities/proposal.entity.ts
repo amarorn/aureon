@@ -7,8 +7,10 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Contact } from '../../crm/entities/contact.entity';
+import { Opportunity } from '../../crm/entities/opportunity.entity';
 import { ProposalItem } from './proposal-item.entity';
 
 export type ProposalStatus =
@@ -28,6 +30,7 @@ export type ProposalSignatureStatus =
   | 'canceled'
   | 'failed';
 
+@Index(['tenantId'])
 @Entity('proposals')
 export class Proposal {
   @PrimaryGeneratedColumn('uuid')
@@ -41,6 +44,10 @@ export class Proposal {
 
   @Column({ name: 'opportunity_id', type: 'uuid', nullable: true })
   opportunityId: string | null;
+
+  @ManyToOne(() => Opportunity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'opportunity_id' })
+  opportunity: Opportunity | null;
 
   @Column()
   title: string;

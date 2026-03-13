@@ -6,12 +6,14 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Contact } from '../../crm/entities/contact.entity';
 
 export type AppointmentType = 'meeting' | 'call' | 'demo' | 'follow_up' | 'other';
 export type AppointmentStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
 
+@Index(['tenantId', 'startAt'])
 @Entity('appointments')
 export class Appointment {
   @PrimaryGeneratedColumn('uuid')

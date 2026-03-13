@@ -4,6 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
 export enum IntegrationProvider {
@@ -34,6 +35,7 @@ export enum IntegrationProvider {
   CAL_COM = 'cal_com',
 }
 
+@Index(['tenantId', 'provider'], { unique: true })
 @Entity('integrations')
 export class Integration {
   @PrimaryGeneratedColumn('uuid')

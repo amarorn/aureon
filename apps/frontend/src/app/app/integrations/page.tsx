@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { BrandLogo } from "./brand-logos";
 
 // OAuth providers — connect via redirect
 const OAUTH_PROVIDERS = [
@@ -541,9 +542,7 @@ function OAuthCard({
     <div className="glass-card rounded-2xl p-6 transition-all duration-200">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${provider.color} flex items-center justify-center shadow-md`}>
-            <span className="text-white text-xs font-bold">{provider.initials}</span>
-          </div>
+          <BrandLogo id={provider.id} />
           <div>
             <h3 className="font-semibold text-foreground">{provider.name}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{provider.description}</p>
@@ -654,11 +653,7 @@ function PlannedCard({
     <div className="glass-card rounded-2xl p-6 border border-dashed border-white/10 opacity-95">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div
-            className={`h-10 w-10 rounded-xl bg-gradient-to-br ${provider.color} flex items-center justify-center shadow-md`}
-          >
-            <span className="text-white text-[10px] font-bold">{provider.initials}</span>
-          </div>
+          <BrandLogo id={provider.id} />
           <div>
             <h3 className="font-semibold text-foreground">{provider.name}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{provider.description}</p>
@@ -741,9 +736,7 @@ function ApiKeyCard({
     <div className="glass-card rounded-2xl p-6 transition-all duration-200">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${provider.color} flex items-center justify-center shadow-md`}>
-            <span className="text-white text-xs font-bold">{provider.initials}</span>
-          </div>
+          <BrandLogo id={provider.id} />
           <div>
             <h3 className="font-semibold text-foreground">{provider.name}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">{provider.description}</p>
@@ -934,9 +927,7 @@ function RdStationOperationsCard({
     <div className="glass-card rounded-2xl p-6 transition-all duration-200 border border-emerald-500/10">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-lime-600 flex items-center justify-center shadow-md">
-            <span className="text-white text-xs font-bold">RD</span>
-          </div>
+          <BrandLogo id="rd_station" />
           <div>
             <h3 className="font-semibold text-foreground">RD Station: importar leads</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -1195,9 +1186,7 @@ function LinkedInLeadGenCard({
     <div className="glass-card rounded-2xl p-6 transition-all duration-200 border border-sky-500/10">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-sky-600 to-blue-700 flex items-center justify-center shadow-md">
-            <span className="text-white text-xs font-bold">in</span>
-          </div>
+          <BrandLogo id="linkedin" />
           <div>
             <h3 className="font-semibold text-foreground">LinkedIn Lead Gen</h3>
             <p className="text-xs text-muted-foreground mt-0.5">

@@ -59,6 +59,17 @@ export function TasksSection({ contactId }: { contactId: string }) {
     },
   });
 
+  const deleteAutomaticMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/tasks/bulk/automatic`, {
+        method: "DELETE",
+        headers: apiHeaders,
+      }).then((r) => (r.ok ? r.json() : { deleted: 0 })),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
   // Marca todas as tarefas pendentes como concluídas
   const markAllMutation = useMutation({
     mutationFn: async () => {
@@ -87,6 +98,7 @@ export function TasksSection({ contactId }: { contactId: string }) {
   const totalCount = taskList.length;
   const allDone = totalCount > 0 && completedCount === totalCount;
   const pct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const hasAutomaticTasks = taskList.some((t: Task) => t.title === "Tarefa automática");
 
   return (
     <div className="glass-card rounded-2xl p-5 space-y-4">
@@ -128,6 +140,26 @@ export function TasksSection({ contactId }: { contactId: string }) {
           </span>
         )}
       </div>
+
+      {hasAutomaticTasks && (
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            Tarefas criadas automaticamente por workflow. Elas não serão mais geradas (configuração atual).
+          </p>
+          <button
+            type="button"
+            onClick={() => deleteAutomaticMutation.mutate()}
+            disabled={deleteAutomaticMutation.isPending}
+            className="shrink-0 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20 disabled:opacity-50"
+          >
+            {deleteAutomaticMutation.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              "Excluir todas as tarefas automáticas"
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Barra de progresso */}
       {totalCount > 0 && (

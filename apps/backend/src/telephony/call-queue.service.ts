@@ -3,15 +3,31 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CallQueueItem, QueueItemStatus } from './entities/call-queue-item.entity';
 import { AddToQueueDto } from './dto/add-to-queue.dto';
+import { Contact } from '../crm/entities/contact.entity';
 
 @Injectable()
 export class CallQueueService {
   constructor(
     @InjectRepository(CallQueueItem)
     private readonly queueRepo: Repository<CallQueueItem>,
+    @InjectRepository(Contact)
+    private readonly contactRepo: Repository<Contact>,
   ) {}
 
   async add(tenantId: string, dto: AddToQueueDto): Promise<CallQueueItem | CallQueueItem[]> {
+    const contactIds = dto.contactIds?.length ? dto.contactIds : dto.contactId ? [dto.contactId] : [];
+    if (!contactIds.length) {
+      throw new NotFoundException('Contact not found');
+    }
+
+    const contacts = await this.contactRepo.find({
+      where: contactIds.map((id) => ({ id, tenantId })),
+      select: ['id'],
+    });
+    if (contacts.length !== new Set(contactIds).size) {
+      throw new NotFoundException('Contact not found');
+    }
+
     if (dto.contactIds?.length) {
       const maxOrder = await this.queueRepo
         .createQueryBuilder('q')

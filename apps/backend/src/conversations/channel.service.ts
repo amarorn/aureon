@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Channel } from './entities/channel.entity';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
+import { ChannelType } from './entities/channel.entity';
 
 @Injectable()
 export class ChannelService {
@@ -12,7 +13,16 @@ export class ChannelService {
     private readonly channelRepo: Repository<Channel>,
   ) {}
 
+  private assertSupportedType(type: ChannelType | undefined): void {
+    if (type === ChannelType.TELEGRAM) {
+      throw new BadRequestException(
+        'Telegram ainda nao esta disponivel nas integracoes deste projeto.',
+      );
+    }
+  }
+
   async create(tenantId: string, dto: CreateChannelDto): Promise<Channel> {
+    this.assertSupportedType(dto.type);
     const channel = this.channelRepo.create({ ...dto, tenantId });
     return this.channelRepo.save(channel);
   }
@@ -38,6 +48,7 @@ export class ChannelService {
     dto: UpdateChannelDto,
   ): Promise<Channel> {
     const channel = await this.findOne(tenantId, id);
+    this.assertSupportedType(dto.type ?? channel.type);
     Object.assign(channel, dto);
     return this.channelRepo.save(channel);
   }

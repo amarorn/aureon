@@ -1,69 +1,40 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Bell, CheckCircle2, UserPlus, ArrowUpRight, X, CheckCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Bell, CheckCircle2, UserPlus, ArrowUpRight, X, CheckCheck, Mail } from "lucide-react";
+import { apiHeaders, API_URL } from "@/lib/api";
 
 interface Notification {
   id: string;
-  type: "won" | "contact" | "stage" | "task" | "mention";
+  type: "won" | "contact" | "stage" | "task" | "mention" | "email";
   title: string;
   body: string;
-  time: string;
   read: boolean;
+  linkUrl: string | null;
+  createdAt: string;
 }
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: "n-1",
-    type: "won",
-    title: "Negócio fechado!",
-    body: "Enterprise Suite - TechCorp foi marcado como ganho · R$ 85.000",
-    time: "há 2h",
-    read: false,
-  },
-  {
-    id: "n-2",
-    type: "stage",
-    title: "Oportunidade avançou",
-    body: "Implementação ERP - Grupo Nexus entrou em Negociação",
-    time: "há 4h",
-    read: false,
-  },
-  {
-    id: "n-3",
-    type: "contact",
-    title: "Novo contato adicionado",
-    body: "Mariana Costa foi adicionada ao CRM",
-    time: "há 6h",
-    read: false,
-  },
-  {
-    id: "n-4",
-    type: "task",
-    title: "Tarefa vencendo hoje",
-    body: "Ligar para Rafael Oliveira sobre proposta CRM Pro",
-    time: "há 8h",
-    read: true,
-  },
-  {
-    id: "n-5",
-    type: "won",
-    title: "Negócio fechado!",
-    body: "CRM Pro - Alfa Sistemas foi marcado como ganho · R$ 42.000",
-    time: "ontem",
-    read: true,
-  },
-  {
-    id: "n-6",
-    type: "stage",
-    title: "Oportunidade avançou",
-    body: "Plataforma Agro - Eta Partners entrou em Proposta",
-    time: "ontem",
-    read: true,
-  },
-];
+function formatTimeAgo(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const diffD = Math.floor(diffH / 24);
+  if (diffMin < 1) return "agora";
+  if (diffMin < 60) return `há ${diffMin}min`;
+  if (diffH < 24) return `há ${diffH}h`;
+  if (diffD === 1) return "ontem";
+  if (diffD < 7) return `há ${diffD} dias`;
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
 
-const TYPE_CONFIG = {
+const TYPE_CONFIG: Record<
+  Notification["type"],
+  { icon: React.ReactNode; bg: string }
+> = {
   won: {
     icon: <CheckCircle2 className="h-4 w-4 text-emerald-400" />,
     bg: "bg-emerald-500/10",
@@ -88,12 +59,44 @@ const TYPE_CONFIG = {
     icon: <Bell className="h-4 w-4 text-pink-400" />,
     bg: "bg-pink-500/10",
   },
+  email: {
+    icon: <Mail className="h-4 w-4 text-sky-400" />,
+    bg: "bg-sky-500/10",
+  },
 };
 
 export function NotificationBell() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
   const ref = useRef<HTMLDivElement>(null);
+
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["notifications"],
+    queryFn: () =>
+      fetch(`${API_URL}/notifications`, { headers: apiHeaders }).then((r) =>
+        r.ok ? r.json() : [],
+      ),
+    refetchInterval: 45_000,
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/notifications/all/read`, {
+        method: "PATCH",
+        headers: apiHeaders,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const dismissMutation = useMutation({
+    mutationFn: (id: string) =>
+      fetch(`${API_URL}/notifications/${id}`, {
+        method: "DELETE",
+        headers: apiHeaders,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -108,11 +111,18 @@ export function NotificationBell() {
   }, []);
 
   function markAllRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllReadMutation.mutate();
   }
 
   function dismiss(id: string) {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    dismissMutation.mutate(id);
+  }
+
+  function handleNotificationClick(n: Notification) {
+    if (n.linkUrl) {
+      router.push(n.linkUrl);
+      setOpen(false);
+    }
   }
 
   return (
@@ -165,9 +175,11 @@ export function NotificationBell() {
                 return (
                   <div
                     key={n.id}
+                    role={n.linkUrl ? "button" : undefined}
+                    onClick={() => n.linkUrl && handleNotificationClick(n)}
                     className={`group flex items-start gap-3 px-4 py-3 border-b border-border/50 last:border-0 transition-colors ${
                       n.read ? "opacity-60" : "bg-primary/[0.03]"
-                    } hover:bg-accent/50`}
+                    } hover:bg-accent/50 ${n.linkUrl ? "cursor-pointer" : ""}`}
                   >
                     <div
                       className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${cfg.bg}`}
@@ -176,13 +188,19 @@ export function NotificationBell() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold text-foreground">{n.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
                         {n.body}
                       </p>
-                      <p className="text-[10px] text-muted-foreground/50 mt-1">{n.time}</p>
+                      <p className="text-[10px] text-muted-foreground/50 mt-1">
+                        {formatTimeAgo(n.createdAt)}
+                      </p>
                     </div>
                     <button
-                      onClick={() => dismiss(n.id)}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dismiss(n.id);
+                      }}
                       className="mt-0.5 shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-all"
                     >
                       <X className="h-3 w-3" />

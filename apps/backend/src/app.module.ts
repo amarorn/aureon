@@ -20,6 +20,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { AdsModule } from './ads/ads.module';
 import { BusinessModule } from './business/business.module';
 import { EmailInboxModule } from './email-inbox/email-inbox.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { EmailInboxModule } from './email-inbox/email-inbox.module';
     AdsModule,
     BusinessModule,
     EmailInboxModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

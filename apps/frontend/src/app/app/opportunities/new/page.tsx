@@ -12,6 +12,7 @@ import { apiHeaders, API_URL } from "@/lib/api";
 export default function NewOpportunityPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [contacts, setContacts] = useState<{ id: string; name: string }[]>([]);
   const [pipelines, setPipelines] = useState<{ id: string; name: string; stages: { id: string; name: string }[] }[]>([]);
   const [form, setForm] = useState({
@@ -35,14 +36,17 @@ export default function NewOpportunityPage() {
   const stages = pipelines.find((p) => p.id === form.pipelineId)?.stages || [];
 
   useEffect(() => {
-    if (form.pipelineId && stages.length > 0 && !form.stageId) {
-      setForm((f) => ({ ...f, stageId: stages[0].id }));
+    const selectedStages =
+      pipelines.find((pipeline) => pipeline.id === form.pipelineId)?.stages ?? [];
+    if (form.pipelineId && selectedStages.length > 0 && !form.stageId) {
+      setForm((f) => ({ ...f, stageId: selectedStages[0].id }));
     }
-  }, [form.pipelineId, stages]);
+  }, [form.pipelineId, form.stageId, pipelines]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`${API_URL}/opportunities`, {
         method: "POST",
@@ -53,8 +57,15 @@ export default function NewOpportunityPage() {
         }),
       });
       if (res.ok) {
-        const data = await res.json();
         router.push(`/app/opportunities`);
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      if (typeof data?.message === "string") setError(data.message);
+      else if (Array.isArray(data?.message) && data.message.length) {
+        setError(String(data.message[0]));
+      } else {
+        setError("Nao foi possivel criar a oportunidade.");
       }
     } finally {
       setLoading(false);
@@ -148,6 +159,7 @@ export default function NewOpportunityPage() {
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                 />
               </div>
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <div className="flex gap-2">
                 <Button type="submit" disabled={loading}>
                   {loading ? "Salvando..." : "Salvar"}

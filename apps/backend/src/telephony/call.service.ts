@@ -1,17 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Call, CallStatus } from './entities/call.entity';
+import { Call } from './entities/call.entity';
 import { CreateCallDto } from './dto/create-call.dto';
+import { Contact } from '../crm/entities/contact.entity';
 
 @Injectable()
 export class CallService {
   constructor(
     @InjectRepository(Call)
     private readonly callRepo: Repository<Call>,
+    @InjectRepository(Contact)
+    private readonly contactRepo: Repository<Contact>,
   ) {}
 
   async create(tenantId: string, dto: CreateCallDto): Promise<Call> {
+    const contact = await this.contactRepo.findOne({
+      where: { id: dto.contactId, tenantId },
+    });
+    if (!contact) throw new NotFoundException('Contact not found');
+
     const call = this.callRepo.create({
       ...dto,
       tenantId,

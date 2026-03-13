@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Contact } from './contact.entity';
 import { Pipeline } from './pipeline.entity';
@@ -14,6 +15,7 @@ import { Stage } from './stage.entity';
 import { Interaction } from './interaction.entity';
 import { Task } from './task.entity';
 
+@Index(['tenantId'])
 @Entity('opportunities')
 export class Opportunity {
   @PrimaryGeneratedColumn('uuid')
@@ -41,7 +43,7 @@ export class Opportunity {
   expectedCloseDate: Date | null;
 
   @Column({ name: 'closed_at', type: 'timestamp', nullable: true })
-  closedAt: Date;
+  closedAt: Date | null;
 
   @Column({ type: 'text', nullable: true })
   notes: string;

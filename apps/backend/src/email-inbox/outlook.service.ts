@@ -213,8 +213,8 @@ export class OutlookService {
     to: string,
     subject: string,
     bodyHtml: string,
-    options?: { cc?: string },
-  ): Promise<void> {
+    options?: { cc?: string; conversationId?: string },
+  ): Promise<{ persistedMessageId: string }> {
     const token = await this.getAccessToken(tenantId);
     const myEmail = await this.getEmailAddress(tenantId);
 
@@ -245,20 +245,27 @@ export class OutlookService {
     if (!res.ok) throw new Error(`Outlook send failed: ${await res.text()}`);
 
     // Save outbound message to conversations
-    const channel = await this.ensureEmailChannel(tenantId);
-    const contact = await this.findOrCreateContact(tenantId, to, to);
-    // For sent messages, conversationId is unknown until synced; use a placeholder
-    const conversation = await this.findOrCreateEmailConversation(
-      tenantId,
-      contact.id,
-      channel.id,
-      `sent-${Date.now()}-${to}`,
-      subject,
-    );
-    await this.messageRepo.save(
+    let conversationId = options?.conversationId ?? null;
+    if (!conversationId) {
+      const channel = await this.ensureEmailChannel(tenantId);
+      const contact = await this.findOrCreateContact(tenantId, to, to);
+      // For sent messages, conversationId is unknown until synced; use a placeholder
+      const conversation = await this.findOrCreateEmailConversation(
+        tenantId,
+        contact.id,
+        channel.id,
+        `sent-${Date.now()}-${to}`,
+        subject,
+      );
+      conversationId = conversation.id;
+    } else {
+      await this.conversationRepo.update(conversationId, { subject });
+    }
+
+    const savedMessage = await this.messageRepo.save(
       this.messageRepo.create({
         tenantId,
-        conversationId: conversation.id,
+        conversationId,
         content: bodyHtml,
         direction: MessageDirection.OUTBOUND,
         externalId: null,
@@ -266,6 +273,8 @@ export class OutlookService {
         templateId: null,
       }),
     );
+
+    return { persistedMessageId: savedMessage.id };
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

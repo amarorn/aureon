@@ -35,6 +35,7 @@ import { Proposal } from '../proposals/entities/proposal.entity';
 import { ProposalItem } from '../proposals/entities/proposal-item.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { SmsMessage } from '../telephony/entities/sms-message.entity';
+import { Notification } from '../notifications/entities/notification.entity';
 
 const entities = [
   Tenant,
@@ -64,6 +65,7 @@ const entities = [
   ProposalItem,
   Payment,
   SmsMessage,
+  Notification,
 ];
 
 async function sync() {

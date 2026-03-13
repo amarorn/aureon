@@ -46,21 +46,25 @@ export function DraggableCard({
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className={`glass-card rounded-xl p-3.5 transition-all duration-150 cursor-grab active:cursor-grabbing ${
+      className={`glass-card rounded-xl p-3.5 transition-all duration-150 ${
         isDragging ? "opacity-40 scale-95" : "hover:shadow-[0_4px_20px_rgba(0,0,0,0.15)]"
       }`}
       style={{ borderLeft: `3px solid ${accentColor}` }}
     >
-      {/* Grip icon + title row */}
+      {/* Grip (drag handle) + title row */}
       <div className="flex items-start gap-2">
-        <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/25" />
+        <span
+          {...listeners}
+          {...attributes}
+          className="mt-0.5 flex cursor-grab active:cursor-grabbing touch-none rounded p-0.5 -m-0.5 text-muted-foreground/40 hover:text-muted-foreground"
+          title="Arraste para mover"
+        >
+          <GripVertical className="h-3.5 w-3.5 shrink-0" />
+        </span>
         <div className="min-w-0 flex-1">
           <Link
             href={`/app/opportunities/${opp.id}`}
             className="text-sm font-semibold text-foreground hover:text-primary transition-colors leading-snug line-clamp-2"
-            onClick={(e) => e.stopPropagation()}
           >
             {opp.title}
           </Link>

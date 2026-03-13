@@ -24,7 +24,7 @@ export function AddToQueueButton({ contactId }: { contactId: string }) {
       onClick={() => mutation.mutate()}
       disabled={mutation.isPending}
     >
-      Ligar
+      Adicionar à fila
     </Button>
   );
 }

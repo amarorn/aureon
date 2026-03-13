@@ -7,6 +7,7 @@ import { Channel, ChannelType } from '../conversations/entities/channel.entity';
 import { Conversation, ConversationStatus } from '../conversations/entities/conversation.entity';
 import { Message, MessageDirection } from '../conversations/entities/message.entity';
 import { Contact } from '../crm/entities/contact.entity';
+import { NotificationService } from '../notifications/notification.service';
 
 interface GmailHeader {
   name: string;
@@ -43,6 +44,7 @@ export class GmailService {
 
   constructor(
     private readonly integrationService: IntegrationService,
+    private readonly notificationService: NotificationService,
     @InjectRepository(Channel)
     private readonly channelRepo: Repository<Channel>,
     @InjectRepository(Conversation)
@@ -214,8 +216,20 @@ export class GmailService {
     });
     await this.messageRepo.save(message);
 
-    // Update conversation updatedAt
     await this.conversationRepo.update(conversation.id, { subject });
+
+    if (direction === MessageDirection.INBOUND) {
+      try {
+        await this.notificationService.create(tenantId, {
+          type: 'email',
+          title: 'Novo e-mail recebido',
+          body: `${fromName || fromEmail}: ${subject}`,
+          linkUrl: `/app/inbox/${conversation.id}`,
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to create email notification: ${err}`);
+      }
+    }
   }
 
   // ── Send ───────────────────────────────────────────────────────────────────
@@ -225,8 +239,13 @@ export class GmailService {
     to: string,
     subject: string,
     bodyHtml: string,
-    options?: { cc?: string; replyToMessageId?: string; threadId?: string },
-  ): Promise<{ messageId: string; threadId: string }> {
+    options?: {
+      cc?: string;
+      replyToMessageId?: string;
+      threadId?: string;
+      conversationId?: string;
+    },
+  ): Promise<{ messageId: string; threadId: string; persistedMessageId: string }> {
     const token = await this.getAccessToken(tenantId);
     const myEmail = await this.getEmailAddress(tenantId);
 
@@ -263,19 +282,29 @@ export class GmailService {
     const sent = (await res.json()) as { id: string; threadId: string };
 
     // Save outbound message to conversations
-    const channel = await this.ensureEmailChannel(tenantId);
-    const contact = await this.findOrCreateContact(tenantId, to, to);
-    const conversation = await this.findOrCreateEmailConversation(
-      tenantId,
-      contact.id,
-      channel.id,
-      sent.threadId,
-      subject,
-    );
-    await this.messageRepo.save(
+    let conversationId = options?.conversationId ?? null;
+    if (!conversationId) {
+      const channel = await this.ensureEmailChannel(tenantId);
+      const contact = await this.findOrCreateContact(tenantId, to, to);
+      const conversation = await this.findOrCreateEmailConversation(
+        tenantId,
+        contact.id,
+        channel.id,
+        sent.threadId,
+        subject,
+      );
+      conversationId = conversation.id;
+    } else {
+      await this.conversationRepo.update(conversationId, {
+        externalId: sent.threadId,
+        subject,
+      });
+    }
+
+    const savedMessage = await this.messageRepo.save(
       this.messageRepo.create({
         tenantId,
-        conversationId: conversation.id,
+        conversationId,
         content: bodyHtml,
         direction: MessageDirection.OUTBOUND,
         externalId: sent.id,
@@ -284,7 +313,11 @@ export class GmailService {
       }),
     );
 
-    return { messageId: sent.id, threadId: sent.threadId };
+    return {
+      messageId: sent.id,
+      threadId: sent.threadId,
+      persistedMessageId: savedMessage.id,
+    };
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────

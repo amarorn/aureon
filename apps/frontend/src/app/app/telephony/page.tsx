@@ -1,6 +1,7 @@
 import { PowerDialer } from "./power-dialer";
 import { CallHistory } from "./call-history";
 import { Phone } from "lucide-react";
+import { TelephonySmsHistory } from "@/components/telephony-sms-history";
 
 export default function TelephonyPage() {
   return (
@@ -29,6 +30,7 @@ export default function TelephonyPage() {
             Histórico de chamadas
           </h2>
           <CallHistory />
+          <TelephonySmsHistory />
         </div>
       </div>
     </div>

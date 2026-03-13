@@ -13,7 +13,6 @@ const CHANNEL_TYPES = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "E-mail" },
   { value: "instagram", label: "Instagram" },
-  { value: "telegram", label: "Telegram" },
   { value: "other", label: "Outro" },
 ];
 

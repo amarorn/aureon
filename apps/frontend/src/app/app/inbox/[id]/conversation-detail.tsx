@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Mail, ArrowLeft, RefreshCw } from "lucide-react";
+import { Mail, RefreshCw } from "lucide-react";
 import { apiHeaders, API_URL } from "@/lib/api";
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -38,6 +38,11 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [emailCc, setEmailCc] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  const invalidateConversation = () => {
+    queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+  };
 
   const { data: conversation, isLoading, error } = useQuery({
     queryKey: ["conversation", conversationId],
@@ -56,23 +61,49 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   });
 
   const sendMutation = useMutation({
-    mutationFn: (body: {
+    mutationFn: async (body: {
       content: string;
+      recipient?: string;
+      subject?: string;
+      cc?: string;
       templateId?: string;
       templateVariables?: Record<string, string>;
       attachments?: { url: string; filename: string }[];
-    }) =>
-      fetch(`${API_URL}/conversations/${conversationId}/messages`, {
+    }) => {
+      const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify(body),
-      }),
+      });
+      if (!res.ok) {
+        let message = "Erro ao enviar mensagem";
+        try {
+          const data = await res.json();
+          if (typeof data?.message === "string") message = data.message;
+          else if (Array.isArray(data?.message) && data.message.length) {
+            message = String(data.message[0]);
+          } else if (typeof data?.error === "string") {
+            message = data.error;
+          }
+        } catch {
+          const text = await res.text().catch(() => "");
+          if (text) message = text;
+        }
+        throw new Error(message);
+      }
+      return res.json().catch(() => null);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      setSendError(null);
+      invalidateConversation();
       setMessageContent("");
       setSelectedTemplateId("");
       setTemplateVars({});
       setAttachments([]);
+      setEmailBody("");
+    },
+    onError: (error) => {
+      setSendError(error instanceof Error ? error.message : "Erro ao enviar mensagem");
     },
   });
 
@@ -83,9 +114,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
         headers: apiHeaders,
         body: JSON.stringify({ assignedTo }),
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
-    },
+    onSuccess: invalidateConversation,
   });
 
   const closeMutation = useMutation({
@@ -94,9 +123,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
         method: "PUT",
         headers: apiHeaders,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
-    },
+    onSuccess: invalidateConversation,
   });
 
   const reopenMutation = useMutation({
@@ -105,9 +132,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
         method: "PUT",
         headers: apiHeaders,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
-    },
+    onSuccess: invalidateConversation,
   });
 
   const createTaskMutation = useMutation({
@@ -118,7 +143,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
         body: JSON.stringify({ title }),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      invalidateConversation();
       setShowCreateTask(false);
       setTaskTitle("");
     },
@@ -132,44 +157,16 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
         body: JSON.stringify({ title }),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      invalidateConversation();
       setShowCreateOpp(false);
       setOppTitle("");
-    },
-  });
-
-  const emailSendMutation = useMutation({
-    mutationFn: (body: { to: string; subject: string; body: string; cc?: string; provider?: string }) =>
-      fetch(`${API_URL}/email-inbox/send`, {
-        method: "POST",
-        headers: apiHeaders,
-        body: JSON.stringify(body),
-      }).then((r) => r.json()),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
-      setEmailBody("");
-    },
-  });
-
-  const igSendMutation = useMutation({
-    mutationFn: (text: string) =>
-      fetch(`${API_URL}/integrations/instagram/send`, {
-        method: "POST",
-        headers: apiHeaders,
-        body: JSON.stringify({
-          recipientIgsid: conversation?.externalId ?? "",
-          text,
-        }),
-      }).then((r) => r.json()),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
-      setMessageContent("");
     },
   });
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageContent.trim()) return;
+    setSendError(null);
     sendMutation.mutate({
       content: messageContent,
       templateId: selectedTemplateId || undefined,
@@ -200,6 +197,13 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
   const messages = conversation.messages ?? [];
   const contact = conversation.contact;
   const channel = conversation.channel;
+  const showGenericAttachments = channel?.type === "other";
+  const submitLabel =
+    channel?.type === "instagram"
+      ? "Enviar DM"
+      : channel?.type === "whatsapp"
+        ? "Enviar WhatsApp"
+        : "Enviar";
 
   return (
     <div className="space-y-6">
@@ -406,7 +410,8 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!messageContent.trim()) return;
-                igSendMutation.mutate(messageContent);
+                setSendError(null);
+                sendMutation.mutate({ content: messageContent });
               }}
               className="space-y-3 pt-4 border-t"
             >
@@ -418,12 +423,13 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
                 rows={3}
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
+              {sendError ? <p className="text-sm text-destructive">{sendError}</p> : null}
               <Button
                 type="submit"
-                disabled={igSendMutation.isPending || !messageContent.trim()}
+                disabled={sendMutation.isPending || !messageContent.trim()}
                 className="gap-2 bg-gradient-to-r from-pink-500 to-rose-600 text-white border-0 hover:opacity-90"
               >
-                {igSendMutation.isPending ? (
+                {sendMutation.isPending ? (
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <span className="text-xs font-bold">IG</span>
@@ -436,10 +442,11 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!emailBody.trim()) return;
-                emailSendMutation.mutate({
-                  to: emailTo || contact?.email || "",
+                setSendError(null);
+                sendMutation.mutate({
+                  content: emailBody,
+                  recipient: emailTo || contact?.email || "",
                   subject: emailSubject || conversation.subject || "(sem assunto)",
-                  body: emailBody,
                   cc: emailCc || undefined,
                 });
               }}
@@ -485,12 +492,13 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
                   className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
+              {sendError ? <p className="text-sm text-destructive">{sendError}</p> : null}
               <Button
                 type="submit"
-                disabled={emailSendMutation.isPending || !emailBody.trim()}
+                disabled={sendMutation.isPending || !emailBody.trim()}
                 className="gap-2"
               >
-                {emailSendMutation.isPending ? (
+                {sendMutation.isPending ? (
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Mail className="h-3.5 w-3.5" />
@@ -554,48 +562,51 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
                 className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>
-            <div>
-              <Label>Anexos</Label>
-              <div className="mt-1 flex gap-2">
-                <Input
-                  placeholder="URL do arquivo"
-                  value={newAttUrl}
-                  onChange={(e) => setNewAttUrl(e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  placeholder="Nome do arquivo"
-                  value={newAttFilename}
-                  onChange={(e) => setNewAttFilename(e.target.value)}
-                  className="w-40"
-                />
-                <Button type="button" variant="outline" size="sm" onClick={addAttachment}>
-                  Adicionar
-                </Button>
+            {sendError ? <p className="text-sm text-destructive">{sendError}</p> : null}
+            {showGenericAttachments && (
+              <div>
+                <Label>Anexos</Label>
+                <div className="mt-1 flex gap-2">
+                  <Input
+                    placeholder="URL do arquivo"
+                    value={newAttUrl}
+                    onChange={(e) => setNewAttUrl(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Nome do arquivo"
+                    value={newAttFilename}
+                    onChange={(e) => setNewAttFilename(e.target.value)}
+                    className="w-40"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={addAttachment}>
+                    Adicionar
+                  </Button>
+                </div>
+                {attachments.length > 0 && (
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {attachments.map((a, i) => (
+                      <li key={i} className="flex items-center justify-between">
+                        <span>{a.filename}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive h-6"
+                          onClick={() =>
+                            setAttachments((prev) => prev.filter((_, j) => j !== i))
+                          }
+                        >
+                          Remover
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {attachments.length > 0 && (
-                <ul className="mt-2 space-y-1 text-sm">
-                  {attachments.map((a, i) => (
-                    <li key={i} className="flex items-center justify-between">
-                      <span>{a.filename}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive h-6"
-                        onClick={() =>
-                          setAttachments((prev) => prev.filter((_, j) => j !== i))
-                        }
-                      >
-                        Remover
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            )}
             <Button type="submit" disabled={sendMutation.isPending || !messageContent.trim()}>
-              Enviar
+              {submitLabel}
             </Button>
           </form>
           )}

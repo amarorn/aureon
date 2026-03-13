@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Index,
 } from 'typeorm';
 import { Conversation } from './conversation.entity';
 
@@ -16,6 +17,7 @@ export enum ChannelType {
   OTHER = 'other',
 }
 
+@Index(['tenantId'])
 @Entity('channels')
 export class Channel {
   @PrimaryGeneratedColumn('uuid')

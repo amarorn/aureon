@@ -6,10 +6,12 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Contact } from './contact.entity';
 import { Opportunity } from './opportunity.entity';
 
+@Index(['tenantId'])
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn('uuid')
