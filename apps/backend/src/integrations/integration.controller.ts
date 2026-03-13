@@ -80,10 +80,13 @@ export class IntegrationController {
   @Get('oauth/callback')
   async handleCallback(
     @Query('code') code: string,
+    @Query('auth_code') authCode: string, // TikTok uses auth_code instead of code
     @Query('state') state: string,
     @Query('error') error: string,
     @Res() res: Response,
   ) {
+    // TikTok Ads sends auth_code, not code — normalise here
+    if (!code && authCode) code = authCode;
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const integrationsPath = `${frontendUrl}/app/integrations`;
 

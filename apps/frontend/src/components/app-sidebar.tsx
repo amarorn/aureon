@@ -20,6 +20,7 @@ import {
   LogOut,
   Sparkles,
   PanelLeftClose,
+  TrendingUp,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,7 @@ const navGroups = [
       { href: "/app/integrations", label: "Integrações", icon: Plug, exact: false },
       { href: "/app/analytics/google", label: "Google Analytics", icon: BarChart3, exact: false },
       { href: "/app/ads/google", label: "Google Ads", icon: Megaphone, exact: false },
+      { href: "/app/ads/tiktok", label: "TikTok Ads", icon: TrendingUp, exact: false },
       { href: "/app/business/google", label: "Business Profile", icon: Building2, exact: false },
     ],
   },
