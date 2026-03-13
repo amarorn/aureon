@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 type ProposalStatus = "draft" | "sent" | "viewed" | "accepted" | "declined" | "expired";
+type SignatureStatus = "not_sent" | "sent" | "viewed" | "signed" | "declined" | "canceled" | "failed";
 
 interface ProposalItem {
   id: string;
@@ -27,6 +28,12 @@ interface Proposal {
   id: string;
   title: string;
   status: ProposalStatus;
+  signatureProvider: string | null;
+  signatureStatus: SignatureStatus | null;
+  signatureRequestId: string | null;
+  signatureUrl: string | null;
+  signatureSentAt: string | null;
+  signatureCompletedAt: string | null;
   total: number;
   notes: string | null;
   meetingUrl: string | null;
@@ -46,6 +53,16 @@ const STATUS_CONFIG: Record<ProposalStatus, { label: string; color: string }> = 
   accepted: { label: "Aceita",      color: "bg-emerald-400/15 text-emerald-400 border-emerald-400/20" },
   declined: { label: "Recusada",    color: "bg-destructive/15 text-destructive border-destructive/20" },
   expired:  { label: "Expirada",    color: "bg-muted text-muted-foreground/50 border-border" },
+};
+
+const SIGNATURE_STATUS_CONFIG: Record<SignatureStatus, { label: string; color: string }> = {
+  not_sent: { label: "Não enviada", color: "bg-muted text-muted-foreground border-border" },
+  sent: { label: "Enviada para assinatura", color: "bg-blue-400/15 text-blue-400 border-blue-400/20" },
+  viewed: { label: "Assinatura visualizada", color: "bg-amber-400/15 text-amber-400 border-amber-400/20" },
+  signed: { label: "Assinada", color: "bg-emerald-400/15 text-emerald-400 border-emerald-400/20" },
+  declined: { label: "Assinatura recusada", color: "bg-destructive/15 text-destructive border-destructive/20" },
+  canceled: { label: "Cancelada", color: "bg-muted text-muted-foreground border-border" },
+  failed: { label: "Falha no envio", color: "bg-destructive/15 text-destructive border-destructive/20" },
 };
 
 function formatCurrency(v: number) {
@@ -96,6 +113,48 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
     },
   });
 
+  const signatureSendMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${API_URL}/proposals/${id}/signature/send`, {
+        method: "POST",
+        headers: apiHeaders,
+        body: JSON.stringify({}),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error((data as { message?: string }).message ?? "Erro ao enviar para assinatura");
+      }
+      return data as Proposal;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["proposal", id], data);
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
+      if (data.signatureUrl) {
+        window.open(data.signatureUrl, "_blank", "noopener,noreferrer");
+      }
+    },
+  });
+
+  const signatureRefreshMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`${API_URL}/proposals/${id}/signature/refresh`, {
+        method: "POST",
+        headers: apiHeaders,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error((data as { message?: string }).message ?? "Erro ao atualizar assinatura");
+      }
+      return data as Proposal;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["proposal", id], data);
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -115,6 +174,8 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
   }
 
   const { label, color } = STATUS_CONFIG[proposal.status];
+  const signatureBadge =
+    proposal.signatureStatus ? SIGNATURE_STATUS_CONFIG[proposal.signatureStatus] : null;
   const sortedItems = [...(proposal.items ?? [])].sort((a, b) => a.sort - b.sort);
 
   return (
@@ -131,6 +192,11 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
               <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium", color)}>
                 {label}
               </span>
+              {signatureBadge && (
+                <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium", signatureBadge.color)}>
+                  {signatureBadge.label}
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">Criada em {formatDate(proposal.createdAt)}</p>
           </div>
@@ -142,6 +208,26 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
             <Button size="sm" onClick={() => statusMutation.mutate("sent")} disabled={statusMutation.isPending}>
               <Send className="size-3.5" />
               Enviar
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => signatureSendMutation.mutate()}
+            disabled={signatureSendMutation.isPending}
+          >
+            {signatureSendMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
+            Assinar
+          </Button>
+          {proposal.signatureRequestId && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => signatureRefreshMutation.mutate()}
+              disabled={signatureRefreshMutation.isPending}
+            >
+              {signatureRefreshMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Clock className="size-3.5" />}
+              Atualizar assinatura
             </Button>
           )}
           {(proposal.status === "sent" || proposal.status === "viewed") && (
@@ -191,6 +277,44 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {(proposal.signatureProvider || proposal.signatureStatus) && (
+        <div className="glass-card rounded-xl p-4">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            {proposal.signatureProvider && (
+              <span>Provider: <span className="font-medium text-foreground">{proposal.signatureProvider}</span></span>
+            )}
+            {proposal.signatureStatus && (
+              <span>Status: <span className="font-medium text-foreground">{SIGNATURE_STATUS_CONFIG[proposal.signatureStatus].label}</span></span>
+            )}
+            {proposal.signatureSentAt && <span>Enviada em {formatDate(proposal.signatureSentAt)}</span>}
+            {proposal.signatureCompletedAt && <span>Concluída em {formatDate(proposal.signatureCompletedAt)}</span>}
+          </div>
+          {proposal.signatureUrl && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <a
+                href={proposal.signatureUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-primary hover:underline break-all"
+              >
+                Abrir link de assinatura
+              </a>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => {
+                  void navigator.clipboard.writeText(proposal.signatureUrl!);
+                }}
+                title="Copiar link"
+              >
+                <Copy className="size-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
