@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { apiHeaders, API_URL } from "@/lib/api";
+import { consumeSupportPrefillDraft } from "@/lib/support/ui-actions";
 
 export default function NewContactPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", source: "", notes: "" });
+
+  useEffect(() => {
+    const draft = consumeSupportPrefillDraft("contact");
+    if (!draft) {
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      name: draft.values.name ?? prev.name,
+      email: draft.values.email ?? prev.email,
+      phone: draft.values.phone ?? prev.phone,
+      company: draft.values.company ?? prev.company,
+      source: draft.values.source ?? prev.source,
+      notes: draft.values.notes ?? prev.notes,
+    }));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

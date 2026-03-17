@@ -1,12 +1,10 @@
 import { NextRequest } from "next/server";
 import {
-  createAssistantStream,
-  extractLeadData,
-  getChunkText,
-  hasLeadContactInfo,
-  persistLeadConversation,
-} from "@/lib/assistant/rag";
-import type { ChatMessage, ChatRequestBody } from "@/lib/assistant/types";
+  createSupportStream,
+  extractSupportActions,
+  getSupportChunkText,
+} from "@/lib/support/rag";
+import type { SupportChatRequestBody } from "@/lib/support/types";
 
 export const runtime = "nodejs";
 
@@ -16,7 +14,7 @@ function toSsePayload(payload: unknown) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, assistantMessageId, sessionId }: ChatRequestBody =
+    const { messages, currentPath, runtimeContext }: SupportChatRequestBody =
       await req.json();
 
     if (!messages?.length) {
@@ -35,43 +33,51 @@ export async function POST(req: NextRequest) {
         let fullText = "";
 
         try {
-          const { config, stream } = await createAssistantStream(messages);
+          const { stream, routeContext } = await createSupportStream({
+            messages,
+            currentPath,
+            runtimeContext,
+          });
+
+          if (routeContext) {
+            controller.enqueue(
+              encoder.encode(
+                toSsePayload({
+                  context: {
+                    label: routeContext.label,
+                  },
+                })
+              )
+            );
+          }
 
           for await (const chunk of stream) {
-            const text = getChunkText(chunk);
+            const text = getSupportChunkText(chunk);
             if (text) {
               fullText += text;
               controller.enqueue(encoder.encode(toSsePayload({ text })));
             }
           }
 
-          const lead = await extractLeadData({
-            config,
+          const actions = await extractSupportActions({
             messages,
+            currentPath,
+            runtimeContext,
             assistantReply: fullText,
           });
 
-          if (hasLeadContactInfo(lead)) {
-            controller.enqueue(encoder.encode(toSsePayload({ lead })));
-            void persistLeadConversation({
-              config,
-              lead,
-              messages,
-              assistantReply: fullText,
-              assistantMessageId:
-                assistantMessageId?.trim() || `assistant-${Date.now()}`,
-              sessionId,
-            }).catch((error) => {
-              console.error("[assistant][persistLeadConversation]", error);
-            });
+          if (actions.length) {
+            controller.enqueue(encoder.encode(toSsePayload({ actions })));
           }
 
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-        } catch (err) {
-          console.error("[assistant][stream]", err);
+        } catch (error) {
+          console.error("[support-chat][stream]", error);
           controller.enqueue(
             encoder.encode(
-              toSsePayload({ error: "Erro ao processar resposta." })
+              toSsePayload({
+                error: "Erro ao processar a orientação do suporte.",
+              })
             )
           );
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -89,11 +95,14 @@ export async function POST(req: NextRequest) {
         "X-Accel-Buffering": "no",
       },
     });
-  } catch (err) {
-    console.error("[/api/chat]", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+  } catch (error) {
+    console.error("[/api/support-chat]", error);
+    return new Response(
+      JSON.stringify({ error: "Erro interno ao iniciar o suporte." }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }

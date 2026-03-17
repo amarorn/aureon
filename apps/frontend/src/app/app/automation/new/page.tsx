@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiHeaders, API_URL } from "@/lib/api";
+import { consumeSupportPrefillDraft } from "@/lib/support/ui-actions";
 
 const TRIGGERS = [
   { value: "contact_created", label: "Contato criado" },
@@ -40,6 +41,44 @@ export default function NewWorkflowPage() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const draft = consumeSupportPrefillDraft("workflow");
+    if (!draft) {
+      return;
+    }
+
+    setForm((prev) => {
+      const actionType = draft.values.actionType ?? prev.actions[0]?.type ?? "create_task";
+      const nextActionConfig =
+        actionType === "notification"
+          ? { message: draft.values.notificationMessage ?? "Notificação automática" }
+          : actionType === "update_stage"
+            ? { stageId: draft.values.targetStageId ?? "" }
+            : { title: draft.values.taskTitle ?? "Tarefa automática" };
+
+      return {
+        ...prev,
+        name: draft.values.name ?? prev.name,
+        triggerType: draft.values.triggerType ?? prev.triggerType,
+        triggerConfig: {
+          ...prev.triggerConfig,
+          ...(draft.values.fromStageId
+            ? { fromStageId: draft.values.fromStageId }
+            : {}),
+          ...(draft.values.toStageId
+            ? { toStageId: draft.values.toStageId }
+            : {}),
+        },
+        actions: [
+          {
+            type: actionType,
+            config: nextActionConfig,
+          },
+        ],
+      };
+    });
+  }, []);
 
   useEffect(() => {
     fetch(`${API_URL}/pipelines`, { headers: apiHeaders })

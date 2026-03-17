@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiHeaders, API_URL } from "@/lib/api";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, FileCheck, Plus, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { consumeSupportPrefillDraft } from "@/lib/support/ui-actions";
 
 interface Contact { id: string; name: string; email: string }
 interface LineItem { description: string; quantity: number; unitPrice: number }
@@ -28,6 +29,18 @@ export default function NewProposalPage() {
   const [items, setItems] = useState<LineItem[]>([
     { description: "", quantity: 1, unitPrice: 0 },
   ]);
+
+  useEffect(() => {
+    const draft = consumeSupportPrefillDraft("proposal");
+    if (!draft) {
+      return;
+    }
+
+    setTitle(draft.values.title ?? "");
+    setContactId(draft.values.contactId ?? "");
+    setValidUntil(draft.values.validUntil ?? "");
+    setNotes(draft.values.notes ?? "");
+  }, []);
 
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["contacts"],

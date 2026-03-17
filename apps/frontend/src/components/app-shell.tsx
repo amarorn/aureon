@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppTopBar } from "@/components/app-topbar";
 import { CommandPalette } from "@/components/command-palette";
+import { SupportAssistantWidget } from "@/components/support-assistant-widget";
 import { TourFloatingButton } from "@/components/tour-floating-button";
 
 const SIDEBAR_COLLAPSED_KEY = "aureon-sidebar-collapsed";
@@ -59,6 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         />
         <main className="flex-1 overflow-y-auto relative">
           <TourFloatingButton />
+          <SupportAssistantWidget />
           <div
             key={pathname}
             className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 animate-in fade-in duration-300"

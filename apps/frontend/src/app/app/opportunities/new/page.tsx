@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiHeaders, API_URL } from "@/lib/api";
+import { consumeSupportPrefillDraft } from "@/lib/support/ui-actions";
 
 export default function NewOpportunityPage() {
   const router = useRouter();
@@ -23,6 +24,23 @@ export default function NewOpportunityPage() {
     value: "",
     notes: "",
   });
+
+  useEffect(() => {
+    const draft = consumeSupportPrefillDraft("opportunity");
+    if (!draft) {
+      return;
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      contactId: draft.values.contactId ?? prev.contactId,
+      pipelineId: draft.values.pipelineId ?? prev.pipelineId,
+      stageId: draft.values.stageId ?? prev.stageId,
+      title: draft.values.title ?? prev.title,
+      value: draft.values.value ?? prev.value,
+      notes: draft.values.notes ?? prev.notes,
+    }));
+  }, []);
 
   useEffect(() => {
     fetch(`${API_URL}/contacts`, { headers: apiHeaders })

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { TourSpotlight } from "@/components/tour-spotlight";
 import { TOUR_STEPS, wasTourSeen, markTourSeen, type TourId } from "@/lib/tour-steps";
 import { tourRegistry } from "@/lib/tour-registry";
+import { consumeSupportTourRequest } from "@/lib/support/ui-actions";
 
 interface PageTourProps {
   tourId: TourId;
@@ -16,10 +17,24 @@ export function PageTour({ tourId, autoStart = true }: PageTourProps) {
   const [run, setRun] = useState(false);
   const [step, setStep] = useState(0);
 
-  const start = useCallback(() => {
-    setStep(0);
+  const start = useCallback((options?: { stepIndex?: number; selector?: string }) => {
+    let initialStep = 0;
+
+    if (options?.selector) {
+      const index = steps.findIndex((tourStep) => tourStep.target === options.selector);
+      if (index >= 0) {
+        initialStep = index;
+      }
+    } else if (
+      typeof options?.stepIndex === "number" &&
+      Number.isFinite(options.stepIndex)
+    ) {
+      initialStep = Math.max(0, Math.min(steps.length - 1, options.stepIndex));
+    }
+
+    setStep(initialStep);
     setRun(true);
-  }, []);
+  }, [steps]);
 
   const stop = useCallback(() => {
     setRun(false);
@@ -32,6 +47,21 @@ export function PageTour({ tourId, autoStart = true }: PageTourProps) {
     const t = setTimeout(start, 700);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (steps.length === 0) return;
+    const pendingRequest = consumeSupportTourRequest(tourId);
+    if (!pendingRequest) return;
+
+    const t = setTimeout(() => {
+      start({
+        stepIndex: pendingRequest.stepIndex,
+        selector: pendingRequest.selector,
+      });
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [start, steps.length, tourId]);
 
   // Register with the global registry so TourFloatingButton can trigger it
   useEffect(() => {

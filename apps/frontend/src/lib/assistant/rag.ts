@@ -293,20 +293,6 @@ function sanitizeLeadData(
   };
 }
 
-function buildLeadNotes(lead: LeadData) {
-  return [
-    "Origem: assistente conversacional do site",
-    lead.planoInteresse ? `Plano de interesse: ${lead.planoInteresse}` : undefined,
-    lead.modulosInteresse?.length
-      ? `Módulos de interesse: ${lead.modulosInteresse.join(", ")}`
-      : undefined,
-    lead.tamanhoTime ? `Tamanho do time: ${lead.tamanhoTime}` : undefined,
-    lead.desafioPrincipal ? `Desafio principal: ${lead.desafioPrincipal}` : undefined,
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
 export function getChunkText(chunk: AIMessageChunk) {
   if (typeof chunk.content === "string") {
     return chunk.content;
@@ -393,24 +379,49 @@ export async function extractLeadData(params: {
   return sanitizeLeadData(extracted);
 }
 
-export async function persistLead(lead: LeadData, config: AssistantConfig) {
+export async function persistLeadConversation(params: {
+  config: AssistantConfig;
+  lead: LeadData;
+  messages: ChatMessage[];
+  assistantReply: string;
+  assistantMessageId: string;
+  sessionId?: string;
+}) {
+  const { config, lead, messages, assistantReply, assistantMessageId, sessionId } =
+    params;
+
   if (!config.backendBaseUrl || !config.tenantId || !hasLeadContactInfo(lead)) {
     return;
   }
 
-  await fetch(`${config.backendBaseUrl}/contacts`, {
+  const transcript: ChatMessage[] = [
+    ...messages.filter((message) => message.content.trim()),
+    {
+      id: assistantMessageId,
+      role: "assistant",
+      content: assistantReply,
+    },
+  ];
+
+  await fetch(`${config.backendBaseUrl}/conversations/webchat/sync`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Tenant-Id": config.tenantId,
     },
     body: JSON.stringify({
-      name: lead.nome ?? "Lead via Auri",
-      email: lead.email,
-      phone: lead.telefone,
-      company: lead.empresa,
-      source: "chat_widget",
-      notes: buildLeadNotes(lead),
+      sessionId,
+      lead: {
+        nome: lead.nome,
+        email: lead.email,
+        telefone: lead.telefone,
+        empresa: lead.empresa,
+        planoInteresse: lead.planoInteresse,
+        modulosInteresse: lead.modulosInteresse,
+        tamanhoTime: lead.tamanhoTime,
+        desafioPrincipal: lead.desafioPrincipal,
+      },
+      messages: transcript,
     }),
   });
 }

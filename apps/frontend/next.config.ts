@@ -39,10 +39,6 @@ const publicEnv = {
 
 const nextConfig: NextConfig = {
   env: publicEnv,
-  outputFileTracingRoot: workspaceRoot,
-  turbopack: {
-    root: workspaceRoot,
-  },
 };
 
 export default nextConfig;
