@@ -24,6 +24,7 @@ import { IntegrationProvider } from './entities/integration.entity';
 import { EmailDeliveryService } from './email-delivery.service';
 import { ProposalSignatureService } from './proposal-signature.service';
 import { TeamNotificationService } from './team-notification.service';
+import { TelegramService } from './telegram.service';
 
 @Controller('integrations')
 export class IntegrationController {
@@ -37,6 +38,7 @@ export class IntegrationController {
     private readonly emailDelivery: EmailDeliveryService,
     private readonly proposalSignature: ProposalSignatureService,
     private readonly teamNotifications: TeamNotificationService,
+    private readonly telegram: TelegramService,
   ) {}
 
   @Post()
@@ -274,6 +276,34 @@ export class IntegrationController {
   ) {
     await this.teamNotifications.saveTeamsConfig(tenantId, body.webhookUrl);
     return { ok: true };
+  }
+
+  // ── Telegram ──────────────────────────────────────────────────────────────
+
+  @Get('telegram/status')
+  @UseGuards(TenantGuard)
+  async telegramStatus(@TenantId() tenantId: string) {
+    const connected = await this.telegram.isConnected(tenantId);
+    return { connected };
+  }
+
+  @Post('telegram/config')
+  @UseGuards(TenantGuard)
+  async saveTelegramConfig(
+    @TenantId() tenantId: string,
+    @Body() body: { botToken: string },
+  ) {
+    await this.telegram.saveConfig(tenantId, body.botToken);
+    return { ok: true };
+  }
+
+  @Post('telegram/messages')
+  @UseGuards(TenantGuard)
+  sendTelegram(
+    @TenantId() tenantId: string,
+    @Body() body: { chatId: string; text: string },
+  ) {
+    return this.telegram.sendMessage(tenantId, { chatId: body.chatId, text: body.text });
   }
 
   // ── Twilio (SMS + VoIP) ───────────────────────────────────────────────────

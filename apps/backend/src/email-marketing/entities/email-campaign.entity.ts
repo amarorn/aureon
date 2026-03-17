@@ -8,7 +8,13 @@ import {
 } from 'typeorm';
 import { EmailCampaignRecipient } from './email-campaign-recipient.entity';
 
-export type CampaignStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'cancelled';
+export type CampaignStatus =
+  | 'draft'
+  | 'scheduled'
+  | 'sending'
+  | 'sent'
+  | 'failed'
+  | 'cancelled';
 
 @Entity('email_campaigns')
 export class EmailCampaign {

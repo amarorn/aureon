@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsArray, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsArray, IsUUID, IsDateString } from 'class-validator';
 
 export class CreateCampaignDto {
   @IsString()
@@ -19,7 +19,7 @@ export class CreateCampaignDto {
   fromEmail?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   scheduledAt?: string;
 
   @IsOptional()

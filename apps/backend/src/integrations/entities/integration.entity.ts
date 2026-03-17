@@ -33,6 +33,7 @@ export enum IntegrationProvider {
   TWILIO = 'twilio',
   CALENDLY = 'calendly',
   CAL_COM = 'cal_com',
+  TELEGRAM = 'telegram',
 }
 
 @Index(['tenantId', 'provider'], { unique: true })

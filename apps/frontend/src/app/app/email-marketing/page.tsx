@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -19,10 +20,12 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageTour } from "@/components/page-tour";
 
-type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "cancelled";
+type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "failed" | "cancelled";
 
 interface Campaign {
   id: string;
@@ -43,6 +46,7 @@ const STATUS_CONFIG: Record<CampaignStatus, { label: string; color: string; icon
   scheduled: { label: "Agendado", color: "bg-amber-400/15 text-amber-400 border-amber-400/20", icon: Clock },
   sending: { label: "Enviando", color: "bg-blue-400/15 text-blue-400 border-blue-400/20", icon: Loader2 },
   sent: { label: "Enviado", color: "bg-emerald-400/15 text-emerald-400 border-emerald-400/20", icon: CheckCircle2 },
+  failed: { label: "Falhou", color: "bg-red-500/15 text-red-400 border-red-500/20", icon: AlertCircle },
   cancelled: { label: "Cancelado", color: "bg-destructive/15 text-destructive border-destructive/20", icon: XCircle },
 };
 
@@ -64,6 +68,7 @@ function formatDate(iso: string) {
 
 export default function EmailMarketingPage() {
   const queryClient = useQueryClient();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: campaigns = [], isLoading } = useQuery<Campaign[]>({
     queryKey: ["email-campaigns"],
@@ -74,9 +79,32 @@ export default function EmailMarketingPage() {
   });
 
   const sendMutation = useMutation({
-    mutationFn: (id: string) =>
-      fetch(`${API_URL}/email-campaigns/${id}/send`, { method: "POST", headers: apiHeaders }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-campaigns"] }),
+    mutationFn: async (id: string) => {
+      const response = await fetch(`${API_URL}/email-campaigns/${id}/send`, {
+        method: "POST",
+        headers: apiHeaders,
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        const message =
+          typeof data?.message === "string"
+            ? data.message
+            : Array.isArray(data?.message) && data.message.length
+              ? String(data.message[0])
+              : "Erro ao enviar campanha.";
+        throw new Error(message);
+      }
+      return data;
+    },
+    onSuccess: () => {
+      setActionError(null);
+      queryClient.invalidateQueries({ queryKey: ["email-campaigns"] });
+    },
+    onError: (error) => {
+      setActionError(
+        error instanceof Error ? error.message : "Erro ao enviar campanha."
+      );
+    },
   });
 
   const duplicateMutation = useMutation({
@@ -99,20 +127,21 @@ export default function EmailMarketingPage() {
 
   return (
     <div className="space-y-8">
+      <PageTour tourId="email-marketing" />
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="email-marketing-header">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Email Marketing</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Crie e envie campanhas para seus contatos</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild data-tour="email-marketing-templates-btn">
             <Link href="/app/email-marketing/templates">
               <FileText className="size-4" />
               Templates
             </Link>
           </Button>
-          <Button asChild>
+          <Button asChild data-tour="email-marketing-new-btn">
             <Link href="/app/email-marketing/new">
               <Plus className="size-4" />
               Nova campanha
@@ -122,7 +151,7 @@ export default function EmailMarketingPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" data-tour="email-marketing-stats">
         {[
           { label: "Campanhas enviadas", value: campaigns.filter(c => c.status === "sent").length, icon: Send, color: "from-violet-600 to-indigo-700" },
           { label: "Total de envios", value: totalSent.toLocaleString("pt-BR"), icon: Users, color: "from-blue-600 to-cyan-700" },
@@ -142,6 +171,12 @@ export default function EmailMarketingPage() {
       </div>
 
       {/* Campaigns list */}
+      {actionError ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {actionError}
+        </div>
+      ) : null}
+
       {isLoading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="size-6 animate-spin" />
@@ -158,7 +193,7 @@ export default function EmailMarketingPage() {
           <Button asChild><Link href="/app/email-marketing/new"><Plus className="size-4" />Nova campanha</Link></Button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3" data-tour="email-marketing-list">
           {campaigns.map((c) => {
             const { label, color, icon: StatusIcon } = STATUS_CONFIG[c.status];
             return (
@@ -174,7 +209,11 @@ export default function EmailMarketingPage() {
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{c.subject}</p>
                     <p className="mt-1 text-xs text-muted-foreground/50">
-                      {c.sentAt ? `Enviado em ${formatDate(c.sentAt)}` : c.scheduledAt ? `Agendado para ${formatDate(c.scheduledAt)}` : `Criado em ${formatDate(c.createdAt)}`}
+                      {c.sentAt
+                        ? `Enviado em ${formatDate(c.sentAt)}`
+                        : c.status === "scheduled" && c.scheduledAt
+                          ? `Agendado para ${formatDate(c.scheduledAt)}`
+                          : `Criado em ${formatDate(c.createdAt)}`}
                     </p>
                   </div>
 
@@ -196,14 +235,17 @@ export default function EmailMarketingPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1 shrink-0">
-                    {c.status === "draft" && (
+                    {(c.status === "draft" || c.status === "failed") && (
                       <button
-                        onClick={() => sendMutation.mutate(c.id)}
+                        onClick={() => {
+                          setActionError(null);
+                          sendMutation.mutate(c.id);
+                        }}
                         disabled={sendMutation.isPending}
                         className="flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
                       >
                         <Send className="size-3" />
-                        Enviar
+                        {c.status === "failed" ? "Reenviar" : "Enviar"}
                       </button>
                     )}
                     <button

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { apiHeaders, API_URL } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { PageTour } from "@/components/page-tour";
 
 export default function InboxPage() {
   const queryClient = useQueryClient();
@@ -91,8 +92,9 @@ export default function InboxPage() {
 
   return (
     <div className="space-y-6">
+      <PageTour tourId="inbox" />
       {/* Page header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4" data-tour="inbox-header">
         <div className="flex items-center gap-4">
           <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg glow-primary-sm shrink-0">
             <Inbox className="h-5 w-5 text-white" />
@@ -106,8 +108,9 @@ export default function InboxPage() {
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Sync buttons — icon + short label */}
+          {/* Sync buttons */}
           <button
+            data-tour="inbox-sync-email"
             onClick={syncEmail}
             disabled={syncing !== null}
             title="Sincronizar emails"
@@ -122,6 +125,7 @@ export default function InboxPage() {
           </button>
 
           <button
+            data-tour="inbox-sync-instagram"
             onClick={syncInstagram}
             disabled={syncing !== null}
             title="Sincronizar Instagram"
@@ -196,8 +200,10 @@ export default function InboxPage() {
         </div>
       )}
 
-      {/* Inbox list with search + filters */}
-      <InboxList />
+      {/* Inbox list */}
+      <div data-tour="inbox-list">
+        <InboxList />
+      </div>
     </div>
   );
 }

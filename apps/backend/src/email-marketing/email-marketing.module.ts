@@ -6,6 +6,7 @@ import { EmailTemplate } from './entities/email-template.entity';
 import { EmailCampaignService } from './email-campaign.service';
 import { EmailTemplateService } from './email-template.service';
 import { EmailCampaignController } from './email-campaign.controller';
+import { EmailCampaignTrackingController } from './email-campaign-tracking.controller';
 import { EmailTemplateController } from './email-template.controller';
 import { Contact } from '../crm/entities';
 import { IntegrationsModule } from '../integrations/integrations.module';
@@ -21,6 +22,10 @@ import { IntegrationsModule } from '../integrations/integrations.module';
     IntegrationsModule,
   ],
   providers: [EmailCampaignService, EmailTemplateService],
-  controllers: [EmailCampaignController, EmailTemplateController],
+  controllers: [
+    EmailCampaignController,
+    EmailCampaignTrackingController,
+    EmailTemplateController,
+  ],
 })
 export class EmailMarketingModule {}

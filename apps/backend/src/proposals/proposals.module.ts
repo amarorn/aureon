@@ -5,9 +5,14 @@ import { ProposalItem } from './entities/proposal-item.entity';
 import { ProposalService } from './proposal.service';
 import { ProposalController } from './proposal.controller';
 import { IntegrationsModule } from '../integrations/integrations.module';
+import { Contact } from '../crm/entities/contact.entity';
+import { Opportunity } from '../crm/entities/opportunity.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Proposal, ProposalItem]), IntegrationsModule],
+  imports: [
+    TypeOrmModule.forFeature([Proposal, ProposalItem, Contact, Opportunity]),
+    IntegrationsModule,
+  ],
   providers: [ProposalService],
   controllers: [ProposalController],
 })

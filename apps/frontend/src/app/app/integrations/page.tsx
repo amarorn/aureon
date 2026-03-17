@@ -17,6 +17,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { BrandLogo } from "./brand-logos";
+import { PageTour } from "@/components/page-tour";
 
 // OAuth providers — connect via redirect
 const OAUTH_PROVIDERS = [
@@ -217,6 +218,19 @@ const APIKEY_PROVIDERS = [
     configEndpoint: "stripe/config",
     statusEndpoint: "stripe/status",
     docsHint: "dashboard.stripe.com/apikeys → Secret key (test ou live)",
+  },
+  {
+    id: "telegram",
+    name: "Telegram",
+    description: "Envie mensagens e notificações via Telegram Bot API",
+    color: "from-sky-500 to-blue-600",
+    initials: "TG",
+    fields: [
+      { key: "botToken", label: "Bot Token", placeholder: "123456789:ABCdefGHIjklMNO...", secret: true },
+    ],
+    configEndpoint: "telegram/config",
+    statusEndpoint: "telegram/status",
+    docsHint: "Fale com @BotFather no Telegram → /newbot → use o token recebido.",
   },
   {
     id: "twilio",
@@ -1390,7 +1404,8 @@ function IntegrationsContent() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-4">
+      <PageTour tourId="integrations" />
+      <div className="flex items-center gap-4" data-tour="integrations-header">
         <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg glow-primary-sm">
           <Puzzle className="h-5 w-5 text-white" />
         </div>
@@ -1420,7 +1435,7 @@ function IntegrationsContent() {
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6" data-tour="integrations-cards">
           <div>
             <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-widest">
               Ativação & Importação

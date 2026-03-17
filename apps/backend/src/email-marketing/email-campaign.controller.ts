@@ -43,8 +43,8 @@ export class EmailCampaignController {
   }
 
   @Get(':id/recipients')
-  getRecipients(@Param('id') id: string) {
-    return this.service.getRecipients(id);
+  getRecipients(@TenantId() tenantId: string, @Param('id') id: string) {
+    return this.service.getRecipients(tenantId, id);
   }
 
   @Post(':id/recipients')

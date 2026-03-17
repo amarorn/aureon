@@ -1,4 +1,13 @@
-import { IsString, IsNumber, IsOptional, IsArray, ValidateNested, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsEnum,
+  IsUUID,
+  IsDateString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ProposalItemDto {
@@ -17,11 +26,11 @@ export class CreateProposalDto {
   title: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   contactId?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   opportunityId?: string;
 
   @IsOptional()
@@ -29,7 +38,7 @@ export class CreateProposalDto {
   notes?: string;
 
   @IsOptional()
-  @IsString()
+  @IsDateString()
   validUntil?: string;
 
   @IsOptional()

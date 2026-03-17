@@ -31,6 +31,7 @@ import {
   getStoredDashboardView,
   type DashboardViewId,
 } from "@/components/dashboard-integration-views";
+import { PageTour } from "@/components/page-tour";
 
 // Meta mensal fixa para demonstração
 const MONTHLY_GOAL = 350_000;
@@ -320,10 +321,11 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-8">
+      <PageTour tourId="dashboard" />
       <DashboardViewSwitcher value={dashboardView} onChange={setDashboardView} />
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="dashboard-header">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -339,7 +341,7 @@ export function DashboardContent() {
       </div>
 
       {/* Filters */}
-      <div className="glass-card rounded-2xl p-5">
+      <div className="glass-card rounded-2xl p-5" data-tour="dashboard-filters">
         <div className="flex flex-wrap items-center gap-6">
           <div className="flex items-center gap-2 text-muted-foreground">
             <SlidersHorizontal className="h-4 w-4" />
@@ -382,7 +384,7 @@ export function DashboardContent() {
       </div>
 
       {/* KPI Cards - Row 1 */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" data-tour="dashboard-cards">
         <MetricCard
           title="Total de oportunidades"
           value={String(metrics.totalOpportunities)}

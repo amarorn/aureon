@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiHeaders, API_URL } from "@/lib/api";
@@ -10,6 +11,7 @@ import {
   TrendingUp, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageTour } from "@/components/page-tour";
 
 type ProposalStatus = "draft" | "sent" | "viewed" | "accepted" | "declined" | "expired";
 
@@ -51,10 +53,32 @@ function formatCurrency(v: number) {
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 }
+function formatDateOnly(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+async function readApiError(response: Response, fallback: string) {
+  const data = await response.json().catch(() => ({}));
+  const message = Array.isArray((data as { message?: string | string[] }).message)
+    ? (data as { message: string[] }).message.join(". ")
+    : (data as { message?: string }).message;
+
+  if (!response.ok) {
+    throw new Error(message || fallback);
+  }
+
+  return data;
+}
 
 export default function ProposalsPage() {
   const queryClient = useQueryClient();
   const expiringSoonWindowMs = 3 * 24 * 60 * 60 * 1000;
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: stats } = useQuery<Stats>({
     queryKey: ["proposals-stats"],
@@ -73,33 +97,63 @@ export default function ProposalsPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      fetch(`${API_URL}/proposals/${id}/status`, {
-        method: "PUT",
-        headers: apiHeaders,
-        body: JSON.stringify({ status }),
-      }),
+    mutationFn: async ({ id, status }: { id: string; status: string }) =>
+      readApiError(
+        await fetch(`${API_URL}/proposals/${id}/status`, {
+          method: "PUT",
+          headers: apiHeaders,
+          body: JSON.stringify({ status }),
+        }),
+        "Erro ao atualizar a proposta",
+      ),
+    onMutate: () => {
+      setActionError(null);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Erro ao atualizar a proposta");
     },
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: (id: string) =>
-      fetch(`${API_URL}/proposals/${id}/duplicate`, { method: "POST", headers: apiHeaders }),
+    mutationFn: async (id: string) =>
+      readApiError(
+        await fetch(`${API_URL}/proposals/${id}/duplicate`, {
+          method: "POST",
+          headers: apiHeaders,
+        }),
+        "Erro ao duplicar a proposta",
+      ),
+    onMutate: () => {
+      setActionError(null);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
     },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Erro ao duplicar a proposta");
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) =>
-      fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: apiHeaders }),
+    mutationFn: async (id: string) =>
+      readApiError(
+        await fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: apiHeaders }),
+        "Erro ao excluir a proposta",
+      ),
+    onMutate: () => {
+      setActionError(null);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Erro ao excluir a proposta");
     },
   });
 
@@ -109,13 +163,14 @@ export default function ProposalsPage() {
 
   return (
     <div className="space-y-8">
+      <PageTour tourId="proposals" />
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="proposals-header">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Propostas</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Crie e acompanhe orçamentos enviados</p>
         </div>
-        <Button asChild>
+        <Button asChild data-tour="proposals-new-btn">
           <Link href="/app/proposals/new">
             <Plus className="size-4" />
             Nova proposta
@@ -124,7 +179,7 @@ export default function ProposalsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="proposals-stats">
         {[
           { label: "Total de propostas", value: stats?.total ?? 0, icon: FileCheck, color: "from-violet-600 to-indigo-700" },
           { label: "Valor total", value: formatCurrency(stats?.totalValue ?? 0), icon: DollarSign, color: "from-blue-600 to-cyan-700" },
@@ -144,7 +199,7 @@ export default function ProposalsPage() {
       </div>
 
       {/* Status summary */}
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-5" data-tour="proposals-status-summary">
         {(["draft","sent","viewed","accepted","declined"] as ProposalStatus[]).map((s) => {
           const { label, color, icon: Icon } = STATUS_CONFIG[s];
           const count = s === "draft" ? stats?.draft : s === "sent" || s === "viewed" ? stats?.sent : s === "accepted" ? stats?.accepted : stats?.declined;
@@ -157,6 +212,12 @@ export default function ProposalsPage() {
           );
         })}
       </div>
+
+      {actionError && (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {actionError}
+        </div>
+      )}
 
       {/* List */}
       {isLoading ? (
@@ -175,7 +236,7 @@ export default function ProposalsPage() {
           <Button asChild><Link href="/app/proposals/new"><Plus className="size-4" />Nova proposta</Link></Button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3" data-tour="proposals-list">
           {(proposals as Proposal[]).map((p) => {
             const { label, color, icon: StatusIcon } = STATUS_CONFIG[p.status];
             const expiringThreshold = dataUpdatedAt > 0 ? new Date(dataUpdatedAt + expiringSoonWindowMs) : null;
@@ -208,7 +269,7 @@ export default function ProposalsPage() {
                       )}
                       <span>{p.items.length} item{p.items.length !== 1 ? "s" : ""}</span>
                       <span className="font-semibold text-foreground">{formatCurrency(Number(p.total))}</span>
-                      {p.validUntil && <span>Válida até {formatDate(p.validUntil)}</span>}
+                      {p.validUntil && <span>Válida até {formatDateOnly(p.validUntil)}</span>}
                       <span className="text-muted-foreground/50">Criada em {formatDate(p.createdAt)}</span>
                     </div>
                   </div>

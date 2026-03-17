@@ -23,6 +23,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageTour } from "@/components/page-tour";
 
 type AppointmentType = "meeting" | "call" | "demo" | "follow_up" | "other";
 type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_show";
@@ -226,13 +227,14 @@ export default function CalendarPage() {
 
   return (
     <div className="flex h-full flex-col space-y-6">
+      <PageTour tourId="calendar" />
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="calendar-header">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Calendário</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Gerencie seus agendamentos</p>
         </div>
-        <Button asChild>
+        <Button asChild data-tour="calendar-new-btn">
           <Link href="/app/calendar/new">
             <Plus className="size-4" />
             Novo agendamento
@@ -329,7 +331,7 @@ export default function CalendarPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         {/* Calendar Grid */}
-        <div className="glass-card rounded-2xl p-6">
+        <div className="glass-card rounded-2xl p-6" data-tour="calendar-view">
           {/* Month nav */}
           <div className="mb-6 flex items-center justify-between">
             <button

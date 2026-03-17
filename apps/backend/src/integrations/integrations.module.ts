@@ -19,6 +19,7 @@ import { ProposalSignatureService } from './proposal-signature.service';
 import { TeamNotificationService } from './team-notification.service';
 import { InstagramService } from './instagram.service';
 import { InstagramController } from './instagram.controller';
+import { TelegramService } from './telegram.service';
 import { Channel } from '../conversations/entities/channel.entity';
 import { Conversation } from '../conversations/entities/conversation.entity';
 import { Message } from '../conversations/entities/message.entity';
@@ -65,6 +66,7 @@ import { TenantModule } from '../tenant/tenant.module';
     ProposalSignatureService,
     TeamNotificationService,
     InstagramService,
+    TelegramService,
   ],
   exports: [
     IntegrationService,
@@ -80,6 +82,7 @@ import { TenantModule } from '../tenant/tenant.module';
     ProposalSignatureService,
     TeamNotificationService,
     InstagramService,
+    TelegramService,
   ],
 })
 export class IntegrationsModule {}

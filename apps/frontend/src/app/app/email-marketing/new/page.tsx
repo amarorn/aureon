@@ -36,6 +36,7 @@ export default function NewCampaignPage() {
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
   const [contactSearch, setContactSearch] = useState("");
   const [showContactPicker, setShowContactPicker] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["contacts"],
@@ -98,6 +99,11 @@ export default function NewCampaignPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name || !subject || !bodyHtml) return;
+    if (scheduledAt && selectedContactIds.length === 0) {
+      setFormError("Selecione ao menos um destinatário para agendar a campanha.");
+      return;
+    }
+    setFormError(null);
     mutation.mutate({
       name,
       subject,
@@ -194,6 +200,9 @@ export default function NewCampaignPage() {
           <div className="space-y-1.5">
             <Label htmlFor="scheduledAt">Agendar envio (opcional)</Label>
             <Input id="scheduledAt" type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+            <p className="text-[11px] text-muted-foreground/50">
+              O agendamento só é ativado quando houver destinatários selecionados.
+            </p>
           </div>
         </div>
 
@@ -285,6 +294,9 @@ export default function NewCampaignPage() {
             {mutation.error instanceof Error ? mutation.error.message : "Erro ao criar campanha. Tente novamente."}
           </p>
         )}
+        {formError ? (
+          <p className="text-center text-sm text-destructive">{formError}</p>
+        ) : null}
       </form>
     </div>
   );

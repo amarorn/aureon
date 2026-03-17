@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiHeaders, API_URL } from "@/lib/api";
@@ -71,11 +71,33 @@ function formatCurrency(v: number) {
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 }
+function formatDateOnly(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+async function readApiError(response: Response, fallback: string) {
+  const data = await response.json().catch(() => ({}));
+  const message = Array.isArray((data as { message?: string | string[] }).message)
+    ? (data as { message: string[] }).message.join(". ")
+    : (data as { message?: string }).message;
+
+  if (!response.ok) {
+    throw new Error(message || fallback);
+  }
+
+  return data;
+}
 
 export default function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const { data: proposal, isLoading } = useQuery<Proposal>({
     queryKey: ["proposal", id],
@@ -86,45 +108,78 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
   });
 
   const statusMutation = useMutation({
-    mutationFn: (status: string) =>
-      fetch(`${API_URL}/proposals/${id}/status`, {
-        method: "PUT",
-        headers: apiHeaders,
-        body: JSON.stringify({ status }),
-      }).then((r) => r.json()),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["proposal", id] }),
+    mutationFn: async (status: string) =>
+      readApiError(
+        await fetch(`${API_URL}/proposals/${id}/status`, {
+          method: "PUT",
+          headers: apiHeaders,
+          body: JSON.stringify({ status }),
+        }),
+        "Erro ao atualizar a proposta",
+      ),
+    onMutate: () => {
+      setActionError(null);
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["proposal", id], data);
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Erro ao atualizar a proposta");
+    },
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: () =>
-      fetch(`${API_URL}/proposals/${id}/duplicate`, { method: "POST", headers: apiHeaders }).then((r) => r.json()),
+    mutationFn: async () =>
+      readApiError(
+        await fetch(`${API_URL}/proposals/${id}/duplicate`, { method: "POST", headers: apiHeaders }),
+        "Erro ao duplicar a proposta",
+      ),
+    onMutate: () => {
+      setActionError(null);
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
       router.push(`/app/proposals/${data.id}`);
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Erro ao duplicar a proposta");
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () =>
-      fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: apiHeaders }),
+    mutationFn: async () =>
+      readApiError(
+        await fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: apiHeaders }),
+        "Erro ao excluir a proposta",
+      ),
+    onMutate: () => {
+      setActionError(null);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
       router.push("/app/proposals");
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Erro ao excluir a proposta");
     },
   });
 
   const signatureSendMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`${API_URL}/proposals/${id}/signature/send`, {
-        method: "POST",
-        headers: apiHeaders,
-        body: JSON.stringify({}),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error((data as { message?: string }).message ?? "Erro ao enviar para assinatura");
-      }
-      return data as Proposal;
+    mutationFn: async () =>
+      readApiError(
+        await fetch(`${API_URL}/proposals/${id}/signature/send`, {
+          method: "POST",
+          headers: apiHeaders,
+          body: JSON.stringify({}),
+        }),
+        "Erro ao enviar para assinatura",
+      ) as Promise<Proposal>,
+    onMutate: () => {
+      setActionError(null);
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["proposal", id], data);
@@ -134,24 +189,30 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
         window.open(data.signatureUrl, "_blank", "noopener,noreferrer");
       }
     },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Erro ao enviar para assinatura");
+    },
   });
 
   const signatureRefreshMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`${API_URL}/proposals/${id}/signature/refresh`, {
-        method: "POST",
-        headers: apiHeaders,
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error((data as { message?: string }).message ?? "Erro ao atualizar assinatura");
-      }
-      return data as Proposal;
+    mutationFn: async () =>
+      readApiError(
+        await fetch(`${API_URL}/proposals/${id}/signature/refresh`, {
+          method: "POST",
+          headers: apiHeaders,
+        }),
+        "Erro ao atualizar assinatura",
+      ) as Promise<Proposal>,
+    onMutate: () => {
+      setActionError(null);
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["proposal", id], data);
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       queryClient.invalidateQueries({ queryKey: ["proposals-stats"] });
+    },
+    onError: (error) => {
+      setActionError(error instanceof Error ? error.message : "Erro ao atualizar assinatura");
     },
   });
 
@@ -177,6 +238,18 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
   const signatureBadge =
     proposal.signatureStatus ? SIGNATURE_STATUS_CONFIG[proposal.signatureStatus] : null;
   const sortedItems = [...(proposal.items ?? [])].sort((a, b) => a.sort - b.sort);
+  const canSendForSignature = !(
+    proposal.status === "accepted" ||
+    proposal.signatureStatus === "signed" ||
+    proposal.signatureStatus === "sent" ||
+    proposal.signatureStatus === "viewed"
+  );
+  const signatureButtonLabel =
+    proposal.status === "accepted" || proposal.signatureStatus === "signed"
+      ? "Já assinada"
+      : proposal.signatureStatus === "sent" || proposal.signatureStatus === "viewed"
+        ? "Assinatura em andamento"
+        : "Assinar";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -214,10 +287,10 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
             size="sm"
             variant="outline"
             onClick={() => signatureSendMutation.mutate()}
-            disabled={signatureSendMutation.isPending}
+            disabled={signatureSendMutation.isPending || !canSendForSignature}
           >
             {signatureSendMutation.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <FileText className="size-3.5" />}
-            Assinar
+            {signatureButtonLabel}
           </Button>
           {proposal.signatureRequestId && (
             <Button
@@ -251,6 +324,12 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
           </Button>
         </div>
       </div>
+
+      {actionError && (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {actionError}
+        </div>
+      )}
 
       {/* Timeline */}
       {(proposal.sentAt || proposal.viewedAt || proposal.respondedAt) && (
@@ -338,7 +417,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">Válida até</p>
             <p className="flex items-center gap-1.5 text-sm text-foreground">
               <Clock className="size-3.5 text-muted-foreground" />
-              {formatDate(proposal.validUntil)}
+              {formatDateOnly(proposal.validUntil)}
             </p>
           </div>
         )}

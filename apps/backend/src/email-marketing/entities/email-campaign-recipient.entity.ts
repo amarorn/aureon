@@ -36,6 +36,9 @@ export class EmailCampaignRecipient {
   @Column({ name: 'opened_at', type: 'timestamp', nullable: true })
   openedAt: Date | null;
 
+  @Column({ name: 'clicked_at', type: 'timestamp', nullable: true })
+  clickedAt: Date | null;
+
   @ManyToOne(() => EmailCampaign, (c) => c.recipients, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'campaign_id' })
   campaign: EmailCampaign;

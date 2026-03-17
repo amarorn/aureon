@@ -80,7 +80,7 @@ export default function NewProposalPage() {
     mutation.mutate({
       title,
       ...(contactId && { contactId }),
-      ...(validUntil && { validUntil: new Date(validUntil).toISOString() }),
+      ...(validUntil && { validUntil }),
       ...(notes && { notes }),
       items: items.filter((i) => i.description.trim()),
     });

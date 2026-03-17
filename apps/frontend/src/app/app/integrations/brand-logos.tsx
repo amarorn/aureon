@@ -17,6 +17,7 @@ import {
   SiSendgrid,
   SiInstagram,
   SiCalendly,
+  SiTelegram,
 } from "react-icons/si";
 
 // ── Inline SVGs for brands not in simple-icons ──────────────────────────────
@@ -94,6 +95,7 @@ const BRAND_MAP: Record<string, BrandEntry> = {
   "amazon-ses": { type: "svg", component: AwsSvg, bg: "rgba(255,153,0,0.10)" },
   docusign: { type: "initials", text: "DS", bg: "rgba(0,102,204,0.12)", color: "#0066CC" },
   instagram: { type: "si", icon: SiInstagram, bg: "rgba(225,48,108,0.12)", color: "#E1306C" },
+  telegram: { type: "si", icon: SiTelegram, bg: "rgba(0,136,204,0.12)", color: "#0088CC" },
   calendly: { type: "si", icon: SiCalendly, bg: "rgba(0,107,255,0.12)", color: "#006BFF" },
   // Initials fallbacks for niche/Brazilian brands
   asaas: { type: "initials", text: "AS", bg: "rgba(124,58,237,0.15)", color: "#a78bfa" },
