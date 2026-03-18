@@ -15,7 +15,14 @@ async function bootstrap() {
   );
   const corsOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
-    : ['http://localhost:3000', 'https://aureon-rose.vercel.app'];
+    : [
+        // Dev local (frontend)
+        'http://localhost:3000',
+        // Frontend em Vercel
+        'https://aureon-rose.vercel.app',
+        // Domínio que está gerando os erros no console
+        'https://aureonsystem.com.br',
+      ];
   app.enableCors({
     origin: corsOrigins,
     credentials: true,
