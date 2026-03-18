@@ -19,7 +19,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import type { ChatMessage, LeadData } from "@/lib/assistant/types";
+import type {
+  ChatMessage,
+  ChatRequestBody,
+  LeadData,
+} from "@/lib/assistant/types";
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -161,6 +165,7 @@ export function ChatWidget() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const sessionIdRef = useRef(uid());
 
   // Clear unread when opened
   useEffect(() => {
@@ -196,8 +201,8 @@ export function ChatWidget() {
 
       // Build conversation history for the API
       const history: ChatMessage[] = [
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-        { role: "user", content: trimmed },
+        ...messages.map((m) => ({ id: m.id, role: m.role, content: m.content })),
+        { id: userMsg.id, role: "user", content: trimmed },
       ];
 
       // Placeholder for streaming assistant message
@@ -211,10 +216,16 @@ export function ChatWidget() {
       abortRef.current = controller;
 
       try {
+        const payload: ChatRequestBody = {
+          sessionId: sessionIdRef.current,
+          assistantMessageId: assistantId,
+          messages: history,
+        };
+
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify(payload),
           signal: controller.signal,
         });
 

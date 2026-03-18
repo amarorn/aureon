@@ -1,7 +1,12 @@
 // Lightweight singleton that connects PageTour (per-page) with TourFloatingButton (global).
 // No Zustand or React context needed — just a module-level store with subscribers.
 
-type StartFn = () => void;
+export interface TourStartOptions {
+  stepIndex?: number;
+  selector?: string;
+}
+
+type StartFn = (options?: TourStartOptions) => void;
 type Listener = () => void;
 
 let _start: StartFn | null = null;
@@ -16,8 +21,8 @@ export const tourRegistry = {
     _start = null;
     _listeners.forEach((l) => l());
   },
-  start() {
-    _start?.();
+  start(options?: TourStartOptions) {
+    _start?.(options);
   },
   get hasTour() {
     return _start !== null;

@@ -1,6 +1,7 @@
 export type ChatRole = "user" | "assistant";
 
 export interface ChatMessage {
+  id: string;
   role: ChatRole;
   content: string;
 }
@@ -14,4 +15,10 @@ export interface LeadData {
   modulosInteresse?: string[];
   tamanhoTime?: string;
   desafioPrincipal?: string;
+}
+
+export interface ChatRequestBody {
+  sessionId?: string;
+  assistantMessageId?: string;
+  messages: ChatMessage[];
 }

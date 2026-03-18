@@ -19,6 +19,8 @@ import { MessageService } from './message.service';
 import { MessageController } from './message.controller';
 import { MessageTemplateService } from './message-template.service';
 import { MessageTemplateController } from './message-template.controller';
+import { WebchatSyncController } from './webchat-sync.controller';
+import { WebchatSyncService } from './webchat-sync.service';
 
 @Module({
   imports: [
@@ -39,12 +41,14 @@ import { MessageTemplateController } from './message-template.controller';
     ConversationController,
     MessageController,
     MessageTemplateController,
+    WebchatSyncController,
   ],
   providers: [
     ChannelService,
     ConversationService,
     MessageService,
     MessageTemplateService,
+    WebchatSyncService,
   ],
 })
 export class ConversationsModule {}
