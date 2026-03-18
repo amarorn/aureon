@@ -20,14 +20,12 @@ import { API_URL, TENANT_ID, apiHeaders } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/assistant/types";
 import { resolveSupportRouteContext } from "@/lib/support/route-context";
-import { tourRegistry } from "@/lib/tour-registry";
 import type {
   SupportChatRequestBody,
   SupportRuntimeContext,
 } from "@/lib/support/types";
 import {
   queueSupportPrefillDraft,
-  queueSupportTourRequest,
   type SupportUiAction,
 } from "@/lib/support/ui-actions";
 
@@ -52,8 +50,8 @@ const DEFAULT_PROMPTS = [
   "Essa é a melhor funcionalidade para essa necessidade?",
 ];
 
-const TUTORIAL_INTENT_REGEX =
-  /me mostra|mostra na tela|mostrar na tela|abre o tutorial|guia visual|me ensina visualmente/i;
+const DIRECT_ACTION_INTENT_REGEX =
+  /me leve|me direciona|me direcione|abra|abrir|vá para|vai para|ir para|crie|criar|cadastre|cadastrar|configure|configurar|preencha|preencher|assuma o controle|faça|faz/i;
 
 function uid() {
   return Math.random().toString(36).slice(2, 9);
@@ -177,10 +175,8 @@ export function SupportAssistantWidget() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [tutorialAvailable, setTutorialAvailable] = useState(tourRegistry.hasTour);
   const [runtimeContext, setRuntimeContext] = useState<SupportRuntimeContext>({
     tenantId: TENANT_ID,
-    hasTutorial: tourRegistry.hasTour,
   });
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -192,17 +188,6 @@ export function SupportAssistantWidget() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
-
-  useEffect(() => {
-    return tourRegistry.subscribe(() => {
-      const hasTutorial = tourRegistry.hasTour;
-      setTutorialAvailable(hasTutorial);
-      setRuntimeContext((prev) => ({
-        ...prev,
-        hasTutorial,
-      }));
-    });
-  }, []);
 
   useEffect(() => {
     if (open) {
@@ -219,7 +204,6 @@ export function SupportAssistantWidget() {
   const loadRuntimeContext = useCallback(async () => {
     const nextContext: SupportRuntimeContext = {
       tenantId: TENANT_ID,
-      hasTutorial: tourRegistry.hasTour,
     };
 
     const [tenantsResult, integrationsResult] = await Promise.allSettled([
@@ -262,65 +246,8 @@ export function SupportAssistantWidget() {
     void loadRuntimeContext();
   }, [open, loadRuntimeContext]);
 
-  const startTutorial = useCallback((options?: {
-    addMessage?: boolean;
-    selector?: string;
-    stepIndex?: number;
-  }) => {
-    if (!tutorialAvailable) {
-      return;
-    }
-
-    if (options?.addMessage) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: uid(),
-          role: "assistant",
-          content:
-            "Vou abrir o tutorial visual desta tela para te guiar no fluxo.",
-          timestamp: new Date(),
-        },
-      ]);
-    }
-
-    setTimeout(() => {
-      tourRegistry.start({
-        selector: options?.selector,
-        stepIndex: options?.stepIndex,
-      });
-      setOpen(false);
-    }, 120);
-  }, [tutorialAvailable]);
-
   const executeAction = useCallback((action: SupportUiAction) => {
     if (action.type === "navigate") {
-      setOpen(false);
-      router.push(action.path);
-      return;
-    }
-
-    if (action.type === "start_tour") {
-      startTutorial({
-        selector: action.selector,
-        stepIndex: action.stepIndex,
-      });
-      return;
-    }
-
-    if (action.type === "navigate_and_tour") {
-      if (pathname === action.path) {
-        startTutorial({
-          selector: action.selector,
-          stepIndex: action.stepIndex,
-        });
-        return;
-      }
-
-      queueSupportTourRequest(action.path, {
-        selector: action.selector,
-        stepIndex: action.stepIndex,
-      });
       setOpen(false);
       router.push(action.path);
       return;
@@ -334,7 +261,7 @@ export function SupportAssistantWidget() {
       setOpen(false);
       router.push(action.path);
     }
-  }, [pathname, router, startTutorial]);
+  }, [router]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -351,13 +278,6 @@ export function SupportAssistantWidget() {
         content: trimmed,
         timestamp: new Date(),
       };
-
-      if (tutorialAvailable && TUTORIAL_INTENT_REGEX.test(trimmed)) {
-        setInput("");
-        setMessages((prev) => [...prev, userMsg]);
-        startTutorial({ addMessage: true });
-        return;
-      }
 
       const history: ChatMessage[] = [
         ...messages.map((message) => ({
@@ -389,10 +309,7 @@ export function SupportAssistantWidget() {
       try {
         const payload: SupportChatRequestBody = {
           currentPath: pathname,
-          runtimeContext: {
-            ...runtimeContext,
-            hasTutorial: tutorialAvailable,
-          },
+          runtimeContext,
           messages: history,
         };
 
@@ -447,16 +364,27 @@ export function SupportAssistantWidget() {
               }
 
               if (parsed.actions) {
+                const actions = parsed.actions as SupportUiAction[];
+
                 setMessages((prev) =>
                   prev.map((message) =>
                     message.id === assistantId
                       ? {
                           ...message,
-                          actions: parsed.actions as SupportUiAction[],
+                          actions,
                         }
                       : message
                   )
                 );
+
+                if (
+                  DIRECT_ACTION_INTENT_REGEX.test(trimmed) &&
+                  actions.length === 1 &&
+                  (actions[0].type === "navigate" ||
+                    actions[0].type === "prefill_form")
+                ) {
+                  setTimeout(() => executeAction(actions[0]), 180);
+                }
               }
 
               if (parsed.error) {
@@ -497,8 +425,7 @@ export function SupportAssistantWidget() {
       messages,
       pathname,
       runtimeContext,
-      startTutorial,
-      tutorialAvailable,
+      executeAction,
     ]
   );
 
@@ -593,17 +520,6 @@ export function SupportAssistantWidget() {
               <div className="mb-2 text-[11px] font-medium text-muted-foreground">
                 Perguntas úteis para esta área
               </div>
-              {tutorialAvailable && (
-                <div className="mb-3">
-                  <button
-                    type="button"
-                    onClick={() => startTutorial({ addMessage: false })}
-                    className="rounded-full border border-primary/30 bg-primary/8 px-3 py-1.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/12"
-                  >
-                    Me mostrar na tela
-                  </button>
-                </div>
-              )}
               <div className="flex flex-wrap gap-2">
                 {prompts.map((prompt) => (
                   <button
@@ -649,7 +565,7 @@ export function SupportAssistantWidget() {
             </button>
           </div>
           <div className="mt-1.5 text-center text-[10px] text-muted-foreground">
-            Explico o processo, recomendo o melhor caminho e oriento passo a passo.
+            Explico o processo, te levo para a tela certa e preparo formulários quando fizer sentido.
           </div>
         </div>
       </div>

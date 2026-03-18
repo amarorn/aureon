@@ -1,30 +1,44 @@
 import { z } from "zod";
 import { SUPPORT_ROUTE_CONTEXTS, resolveSupportRouteContext } from "@/lib/support/route-context";
-import { TOUR_STEPS } from "@/lib/tour-steps";
 import type { SupportRuntimeContext } from "@/lib/support/types";
 import {
-  hasTourForPath,
   isAllowedSupportPath,
-  isAllowedTourSelector,
   isValidPrefillAction,
   sanitizeSupportPrefillValues,
   type SupportFormType,
   type SupportUiAction,
 } from "@/lib/support/ui-actions";
 
+const supportActionValuesSchema = z.object({
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  phone: z.string().nullable(),
+  company: z.string().nullable(),
+  source: z.string().nullable(),
+  notes: z.string().nullable(),
+  contactId: z.string().nullable(),
+  pipelineId: z.string().nullable(),
+  stageId: z.string().nullable(),
+  title: z.string().nullable(),
+  value: z.string().nullable(),
+  triggerType: z.string().nullable(),
+  fromStageId: z.string().nullable(),
+  toStageId: z.string().nullable(),
+  actionType: z.string().nullable(),
+  taskTitle: z.string().nullable(),
+  notificationMessage: z.string().nullable(),
+  targetStageId: z.string().nullable(),
+  validUntil: z.string().nullable(),
+});
+
 export const supportActionSchema = z.object({
-  type: z.enum([
-    "navigate",
-    "start_tour",
-    "navigate_and_tour",
-    "prefill_form",
-  ]),
+  type: z.enum(["navigate", "prefill_form"]),
   label: z.string(),
-  path: z.string().optional(),
-  selector: z.string().optional(),
-  stepIndex: z.number().int().min(0).optional(),
-  formType: z.enum(["contact", "opportunity", "workflow", "proposal"]).optional(),
-  values: z.record(z.string()).optional(),
+  path: z.string().nullable(),
+  formType: z
+    .enum(["contact", "opportunity", "workflow", "proposal"])
+    .nullable(),
+  values: supportActionValuesSchema.nullable(),
 });
 
 export const supportActionResponseSchema = z.object({
@@ -80,22 +94,16 @@ export function buildSupportActionCatalog(params: {
   const currentRoute = resolveSupportRouteContext(currentPath);
   const routeEntries = SUPPORT_ROUTE_CONTEXTS.map((context) => {
     const path = context.pathPrefixes[0];
-    const selectors = context.tourId
-      ? TOUR_STEPS[context.tourId].map((step) => step.target)
-      : [];
 
     return {
       label: context.label,
       path,
-      hasTour: Boolean(context.tourId),
-      selectors,
     };
   });
 
   return {
     currentRouteLabel: currentRoute?.label ?? "Área interna",
     currentPath,
-    hasCurrentTour: Boolean(runtimeContext?.hasTutorial),
     navigationTargets: routeEntries,
     prefillForms: PREFILL_FORMS,
   };
@@ -110,11 +118,7 @@ export function buildSupportActionInstructions(params: {
   const navigationList = catalog.navigationTargets
     .map(
       (target) =>
-        `- ${target.label}: path=${target.path}; tutorial=${target.hasTour ? "sim" : "não"}${
-          target.selectors.length
-            ? `; selectors válidos=${target.selectors.join(", ")}`
-            : ""
-        }`
+        `- ${target.label}: path=${target.path}`
     )
     .join("\n");
 
@@ -131,15 +135,15 @@ Regras:
 - gere no máximo 3 ações;
 - só use caminhos permitidos;
 - use "navigate" para abrir uma página;
-- use "navigate_and_tour" quando valha abrir a página e mostrar visualmente;
-- use "start_tour" apenas se a tela atual tiver tutorial disponível;
 - use "prefill_form" apenas quando o usuário já tiver fornecido dados suficientes;
+- prefira "prefill_form" quando o usuário quiser criar, cadastrar, configurar ou deixar algo pronto;
+- quando o usuário pedir para "mostrar na tela", interprete como levar para a tela correta ou abrir algo já preparado;
+- não use tutorial nem ações visuais guiadas;
 - não invente paths, selectors ou campos;
 - rótulos devem estar em português;
 - se não houver uma ação útil e segura, retorne actions vazia.
 
 Tela atual: ${catalog.currentRouteLabel}
-Tutorial disponível na tela atual: ${catalog.hasCurrentTour ? "sim" : "não"}
 
 Navegação permitida:
 ${navigationList}
@@ -174,43 +178,6 @@ export function sanitizeSupportActions(params: {
       continue;
     }
 
-    if (action.type === "start_tour") {
-      if (!currentPath || !hasTourForPath(currentPath)) {
-        continue;
-      }
-
-      sanitized.push({
-        type: "start_tour",
-        label,
-        ...(isAllowedTourSelector(currentPath, action.selector)
-          ? { selector: action.selector }
-          : {}),
-        ...(typeof action.stepIndex === "number"
-          ? { stepIndex: action.stepIndex }
-          : {}),
-      });
-      continue;
-    }
-
-    if (action.type === "navigate_and_tour") {
-      if (!action.path || !isAllowedSupportPath(action.path) || !hasTourForPath(action.path)) {
-        continue;
-      }
-
-      sanitized.push({
-        type: "navigate_and_tour",
-        label,
-        path: action.path,
-        ...(isAllowedTourSelector(action.path, action.selector)
-          ? { selector: action.selector }
-          : {}),
-        ...(typeof action.stepIndex === "number"
-          ? { stepIndex: action.stepIndex }
-          : {}),
-      });
-      continue;
-    }
-
     if (action.type === "prefill_form") {
       if (!action.path || !action.formType) {
         continue;
@@ -220,13 +187,16 @@ export function sanitizeSupportActions(params: {
         !isValidPrefillAction({
           path: action.path,
           formType: action.formType,
-          values: action.values,
+          values: action.values ?? undefined,
         })
       ) {
         continue;
       }
 
-      const values = sanitizeSupportPrefillValues(action.formType, action.values);
+      const values = sanitizeSupportPrefillValues(
+        action.formType,
+        action.values ?? undefined
+      );
       if (!Object.keys(values).length) {
         continue;
       }
