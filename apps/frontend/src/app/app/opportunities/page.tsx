@@ -1,13 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PipelineBoard } from "./pipeline-board";
 import { Kanban, Plus } from "lucide-react";
+import { PageTour } from "@/components/page-tour";
 
 export default function OpportunitiesPage() {
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
+      <PageTour tourId="opportunities" />
       {/* Page header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="opportunities-header">
         <div className="flex items-center gap-4">
           <div className="h-10 w-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg glow-primary-sm">
             <Kanban className="h-5 w-5 text-white" />
@@ -19,6 +23,7 @@ export default function OpportunitiesPage() {
         </div>
         <Button
           asChild
+          data-tour="opportunities-new-btn"
           className="gradient-primary text-white glow-primary-sm hover:opacity-90 transition-opacity border-0 gap-2"
         >
           <Link href="/app/opportunities/new">
@@ -29,7 +34,9 @@ export default function OpportunitiesPage() {
       </div>
 
       {/* Content */}
-      <PipelineBoard />
+      <div data-tour="opportunities-board">
+        <PipelineBoard />
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, CalendarDays, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface Contact {
   id: string;
@@ -28,6 +29,9 @@ export default function NewAppointmentPage() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
+  const [addGoogleMeet, setAddGoogleMeet] = useState(true);
+  const [addTeamsMeeting, setAddTeamsMeeting] = useState(false);
+  const [useZoomMeeting, setUseZoomMeeting] = useState(false);
 
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["contacts"],
@@ -38,12 +42,19 @@ export default function NewAppointmentPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: (body: Record<string, string>) =>
-      fetch(`${API_URL}/appointments`, {
+    mutationFn: async (body: Record<string, unknown>) => {
+      const res = await fetch(`${API_URL}/appointments`, {
         method: "POST",
         headers: apiHeaders,
         body: JSON.stringify(body),
-      }).then((r) => r.json()),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = Array.isArray(data.message) ? data.message.join(" ") : data.message || "Erro ao criar";
+        throw new Error(msg);
+      }
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       router.push("/app/calendar");
@@ -53,7 +64,7 @@ export default function NewAppointmentPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title || !startAt || !endAt) return;
-    mutation.mutate({
+    const payload: Record<string, unknown> = {
       title,
       type,
       startAt: new Date(startAt).toISOString(),
@@ -62,11 +73,18 @@ export default function NewAppointmentPage() {
       ...(location && { location }),
       ...(description && { description }),
       ...(notes && { notes }),
-    });
+    };
+    if (useZoomMeeting) payload.useZoomMeeting = true;
+    else if (type === "meeting") {
+      payload.addGoogleMeet = addGoogleMeet;
+      if (addTeamsMeeting) payload.addTeamsMeeting = true;
+    }
+
+    mutation.mutate(payload);
   }
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
+    <div className="mx-auto max-w-2xl space-y-8">
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <Button variant="ghost" size="icon-sm" asChild>
@@ -171,6 +189,78 @@ export default function NewAppointmentPage() {
               onChange={(e) => setLocation(e.target.value)}
             />
           </div>
+
+          <div className="space-y-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+              Videoconferência
+            </p>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={useZoomMeeting}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setUseZoomMeeting(v);
+                  if (v) setAddGoogleMeet(false);
+                }}
+                className="mt-0.5 size-4 rounded border-white/20 bg-white/5 accent-primary"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-foreground">Criar reunião Zoom</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Gera link Zoom e grava em meetingUrl (integração Zoom conectada).
+                </span>
+              </span>
+            </label>
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3",
+                useZoomMeeting && "pointer-events-none opacity-50",
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={addGoogleMeet}
+                disabled={useZoomMeeting}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setAddGoogleMeet(v);
+                  if (v) setUseZoomMeeting(false);
+                }}
+                className="mt-0.5 size-4 rounded border-white/20 bg-white/5 accent-primary disabled:opacity-50"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-foreground">Adicionar Google Meet</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Ao sincronizar com Google Calendar (tipo reunião). Se Zoom estiver ativo, Meet não é usado.
+                </span>
+              </span>
+            </label>
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3",
+                useZoomMeeting && "pointer-events-none opacity-50",
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={addTeamsMeeting}
+                disabled={useZoomMeeting}
+                onChange={(e) => {
+                  const v = e.target.checked;
+                  setAddTeamsMeeting(v);
+                  if (v) setUseZoomMeeting(false);
+                }}
+                className="mt-0.5 size-4 rounded border-white/20 bg-white/5 accent-primary disabled:opacity-50"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-foreground">Reunião Microsoft Teams</span>
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  Ao sincronizar com Outlook (Microsoft 365). Gera link Teams no evento.
+                </span>
+              </span>
+            </label>
+          </div>
         </div>
 
         {/* Notes */}
@@ -217,7 +307,9 @@ export default function NewAppointmentPage() {
         </div>
 
         {mutation.isError && (
-          <p className="text-center text-sm text-destructive">Erro ao criar agendamento. Tente novamente.</p>
+          <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {mutation.error?.message || "Erro ao criar agendamento. Tente novamente."}
+          </p>
         )}
       </form>
     </div>

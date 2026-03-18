@@ -7,6 +7,7 @@ Sistema multi-tenant com backend NestJS, frontend Next.js e infraestrutura assí
 ## Multi-tenancy
 
 - Todas as entidades transacionais possuem `tenant_id` (UUID)
+- OAuth (Google, Facebook, LinkedIn, Zoom): credenciais **por tenant** em `tenants.oauth_config` (JSONB), com fallback nas variáveis `INTEGRATION_*` — ver `docs/TENANT_OAUTH.md`
 - Row Level Security (RLS) no PostgreSQL para isolamento
 - Contexto de tenant definido via `set_config('app.tenant_id', ...)` por request
 
@@ -33,7 +34,7 @@ Backend (NestJS)
 3. **Telefonia**: Power dialer, chamadas, filas (implementado)
 4. **Automação**: Workflows, triggers, ações
 5. **Dashboard**: Métricas, funil, filtros (implementado)
-6. **Integrações**: Google Analytics, Google Business Profile, Facebook Ads, Google Ads (implementado)
+6. **Integrações**: Google Analytics, Google Business Profile, Facebook Ads, Google Ads, WhatsApp, Asaas (implementado). **Roadmap**: LinkedIn (leads/enriquecimento), Zoom/Meet (reunião ao agendar + link em proposta) — cards em `/app/integrations`, sem provider no backend ainda.
 
 ## Fase 1 - CRM (Implementado)
 

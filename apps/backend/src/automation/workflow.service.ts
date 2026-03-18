@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Inject, forwardRef, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Workflow } from './entities/workflow.entity';
@@ -25,6 +26,7 @@ export class WorkflowService implements OnModuleInit {
     @Inject(forwardRef(() => OpportunityService))
     private readonly opportunityService: OpportunityService,
     private readonly appEvents: AppEventsService,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -163,15 +165,21 @@ export class WorkflowService implements OnModuleInit {
     config: Record<string, unknown>,
     payload: WorkflowEventPayload,
   ): Promise<void> {
+    if (this.config.get('WORKFLOW_CREATE_TASK_ENABLED') !== 'true') return;
+
     const contactId = (config.contactId as string) || payload.contactId;
     if (!contactId) return;
 
-    await this.taskService.create(payload.tenantId, {
-      contactId,
-      title: (config.title as string) || 'Tarefa automática',
-      description: config.description as string,
-      opportunityId: payload.opportunityId,
-    });
+    await this.taskService.create(
+      payload.tenantId,
+      {
+        contactId,
+        title: (config.title as string) || 'Tarefa automática',
+        description: config.description as string,
+        opportunityId: payload.opportunityId,
+      },
+      { skipWorkflowEvent: true },
+    );
   }
 
   private async executeUpdateStage(

@@ -9,6 +9,32 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { apiHeaders, API_URL } from "@/lib/api";
 
+type ContactOption = {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+};
+
+type ChannelOption = {
+  id: string;
+  name: string;
+  type: string;
+};
+
+function isInstagramBound(contact?: ContactOption | null) {
+  return Boolean(contact?.phone?.startsWith("ig:"));
+}
+
+function isChannelAvailable(contact: ContactOption | null, channel: ChannelOption) {
+  if (channel.type === "instagram") return isInstagramBound(contact);
+  if (channel.type === "whatsapp") {
+    return Boolean(contact?.phone && !contact.phone.startsWith("ig:"));
+  }
+  if (channel.type === "email") return Boolean(contact?.email);
+  return true;
+}
+
 function NewConversationForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,8 +57,24 @@ function NewConversationForm() {
       ),
   });
 
+  const selectedContact =
+    (contacts as ContactOption[]).find((contact) => contact.id === contactId) ?? null;
+  const visibleChannels = (channels as ChannelOption[]).filter(
+    (channel) => channel.type !== "telegram"
+  );
+  const selectedChannel =
+    visibleChannels.find((channel) => channel.id === channelId) ?? null;
+  const canSubmit =
+    Boolean(contactId) &&
+    Boolean(channelId) &&
+    (!selectedChannel || isChannelAvailable(selectedContact, selectedChannel));
+
   const createMutation = useMutation({
-    mutationFn: async (body: { contactId: string; channelId: string }) => {
+    mutationFn: async (body: {
+      contactId: string;
+      channelId: string;
+      externalId?: string;
+    }) => {
       const res = await fetch(`${API_URL}/conversations`, {
         method: "POST",
         headers: apiHeaders,
@@ -48,13 +90,17 @@ function NewConversationForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (contactId && channelId) {
-      createMutation.mutate({ contactId, channelId });
+    if (contactId && channelId && canSubmit) {
+      const externalId =
+        selectedChannel?.type === "instagram" && isInstagramBound(selectedContact)
+          ? selectedContact?.phone?.slice(3)
+          : undefined;
+      createMutation.mutate({ contactId, channelId, externalId });
     }
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
         <div className="mb-6">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/app/inbox">Voltar</Link>
@@ -75,7 +121,7 @@ function NewConversationForm() {
                   className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                 >
                   <option value="">Selecione</option>
-                  {(contacts as { id: string; name: string }[]).map((c) => (
+                  {(contacts as ContactOption[]).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
@@ -91,13 +137,22 @@ function NewConversationForm() {
                   className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                 >
                   <option value="">Selecione</option>
-                  {(channels as { id: string; name: string; type: string }[]).map((ch) => (
+                  {visibleChannels.map((ch) => (
                     <option key={ch.id} value={ch.id}>
                       {ch.name} ({ch.type})
                     </option>
                   ))}
                 </select>
               </div>
+              {selectedChannel && !isChannelAvailable(selectedContact, selectedChannel) && (
+                <p className="text-sm text-destructive">
+                  {selectedChannel.type === "instagram"
+                    ? "Este contato nao possui vinculo com Instagram para iniciar DM."
+                    : selectedChannel.type === "whatsapp"
+                      ? "Este contato nao possui telefone valido para WhatsApp."
+                      : "Este contato nao possui email para iniciar conversa por este canal."}
+                </p>
+              )}
               {channels.length === 0 && (
                 <p className="text-sm text-muted-foreground">
                   Crie um canal em Configurações primeiro.
@@ -105,7 +160,7 @@ function NewConversationForm() {
               )}
               <Button
                 type="submit"
-                disabled={createMutation.isPending || !contactId || !channelId}
+                disabled={createMutation.isPending || !canSubmit}
               >
                 Iniciar conversa
               </Button>
@@ -119,7 +174,7 @@ function NewConversationForm() {
 export default function NewConversationPage() {
   return (
     <Suspense fallback={
-      <div className="p-8 space-y-8">
+      <div className="space-y-8">
           <p className="text-muted-foreground">Carregando...</p>
       </div>
     }>

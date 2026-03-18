@@ -13,7 +13,6 @@ const CHANNEL_TYPES = [
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "E-mail" },
   { value: "instagram", label: "Instagram" },
-  { value: "telegram", label: "Telegram" },
   { value: "other", label: "Outro" },
 ];
 
@@ -60,7 +59,7 @@ export default function ChannelsPage() {
   };
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
         <div className="mb-6">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/app/inbox">Voltar</Link>

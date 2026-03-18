@@ -15,20 +15,27 @@ export class TaskService {
     private readonly appEvents: AppEventsService,
   ) {}
 
-  async create(tenantId: string, dto: CreateTaskDto): Promise<Task> {
+  async create(
+    tenantId: string,
+    dto: CreateTaskDto,
+    options?: { skipWorkflowEvent?: boolean },
+  ): Promise<Task> {
     const task = this.taskRepo.create({
       ...dto,
       tenantId,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
+      overdueNotifiedAt: null,
     });
     const saved = await this.taskRepo.save(task);
-    this.appEvents.emit('task.created', {
-      type: WorkflowTriggerType.TASK_CREATED,
-      tenantId,
-      contactId: saved.contactId,
-      opportunityId: saved.opportunityId ?? undefined,
-      taskId: saved.id,
-    });
+    if (options?.skipWorkflowEvent !== true) {
+      this.appEvents.emit('task.created', {
+        type: WorkflowTriggerType.TASK_CREATED,
+        tenantId,
+        contactId: saved.contactId,
+        opportunityId: saved.opportunityId ?? undefined,
+        taskId: saved.id,
+      });
+    }
     return saved;
   }
 
@@ -62,17 +69,28 @@ export class TaskService {
       ...dto,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : task.dueDate,
     });
+    if (dto.dueDate !== undefined || dto.isCompleted !== undefined) {
+      task.overdueNotifiedAt = null;
+    }
     return this.taskRepo.save(task);
   }
 
   async toggleComplete(tenantId: string, id: string): Promise<Task> {
     const task = await this.findOne(tenantId, id);
     task.isCompleted = !task.isCompleted;
+    if (task.isCompleted) {
+      task.overdueNotifiedAt = null;
+    }
     return this.taskRepo.save(task);
   }
 
   async remove(tenantId: string, id: string): Promise<void> {
     const result = await this.taskRepo.delete({ id, tenantId });
     if (result.affected === 0) throw new NotFoundException('Task not found');
+  }
+
+  async deleteByTitle(tenantId: string, title: string): Promise<{ deleted: number }> {
+    const result = await this.taskRepo.delete({ tenantId, title });
+    return { deleted: result.affected ?? 0 };
   }
 }

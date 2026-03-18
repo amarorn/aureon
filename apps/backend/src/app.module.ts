@@ -11,14 +11,28 @@ import { AutomationModule } from './automation/automation.module';
 import { EventsModule } from './common/events/events.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { PaymentsModule } from './payments/payments.module';
 import { CalendarModule } from './calendar/calendar.module';
+import { EmailMarketingModule } from './email-marketing/email-marketing.module';
+import { ReputationModule } from './reputation/reputation.module';
+import { ProposalsModule } from './proposals/proposals.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AdsModule } from './ads/ads.module';
+import { BusinessModule } from './business/business.module';
+import { EmailInboxModule } from './email-inbox/email-inbox.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
     EventsModule,
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')],
+      envFilePath: [
+        resolve(process.cwd(), '.env'),
+        resolve(process.cwd(), '../.env'),
+        resolve(process.cwd(), '../../.env'),
+        resolve(__dirname, '../../../.env'),
+      ],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -31,7 +45,9 @@ import { CalendarModule } from './calendar/calendar.module';
         database: config.get('DB_NAME', 'aureon'),
         autoLoadEntities: true,
         synchronize: config.get('NODE_ENV') === 'development',
-        logging: config.get('NODE_ENV') === 'development',
+        logging:
+          config.get('DB_LOGGING', 'true') !== 'false' &&
+          config.get('NODE_ENV') === 'development',
       }),
       inject: [ConfigService],
     }),
@@ -43,7 +59,16 @@ import { CalendarModule } from './calendar/calendar.module';
     AutomationModule,
     DashboardModule,
     IntegrationsModule,
+    PaymentsModule,
     CalendarModule,
+    EmailMarketingModule,
+    ReputationModule,
+    ProposalsModule,
+    AnalyticsModule,
+    AdsModule,
+    BusinessModule,
+    EmailInboxModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

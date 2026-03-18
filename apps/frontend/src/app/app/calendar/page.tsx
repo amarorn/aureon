@@ -16,8 +16,14 @@ import {
   User,
   Trash2,
   CheckCircle2,
+  RefreshCw,
+  Download,
+  CalendarCheck,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PageTour } from "@/components/page-tour";
 
 type AppointmentType = "meeting" | "call" | "demo" | "follow_up" | "other";
 type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no_show";
@@ -32,6 +38,8 @@ interface Appointment {
   status: AppointmentStatus;
   location: string | null;
   contact: { id: string; name: string } | null;
+  googleEventId?: string | null;
+  outlookEventId?: string | null;
 }
 
 const TYPE_LABELS: Record<AppointmentType, string> = {
@@ -102,6 +110,60 @@ export default function CalendarPage() {
 
   const queryClient = useQueryClient();
 
+  const { data: gcStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ["google-calendar-status"],
+    queryFn: () =>
+      fetch(`${API_URL}/appointments/google-calendar/status`, {
+        headers: apiHeaders,
+      }).then((r) => (r.ok ? r.json() : { connected: false })),
+    staleTime: 60_000,
+  });
+
+  const { data: outlookStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ["outlook-calendar-status"],
+    queryFn: () =>
+      fetch(`${API_URL}/appointments/outlook-calendar/status`, {
+        headers: apiHeaders,
+      }).then((r) => (r.ok ? r.json() : { connected: false })),
+    staleTime: 60_000,
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/appointments/google-calendar/sync`, {
+        method: "POST",
+        headers: apiHeaders,
+      }).then((r) => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+  });
+
+  const importMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/appointments/google-calendar/import`, {
+        method: "POST",
+        headers: apiHeaders,
+      }).then((r) => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+  });
+
+  const outlookSyncMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/appointments/outlook-calendar/sync`, {
+        method: "POST",
+        headers: apiHeaders,
+      }).then((r) => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+  });
+
+  const outlookImportMutation = useMutation({
+    mutationFn: () =>
+      fetch(`${API_URL}/appointments/outlook-calendar/import`, {
+        method: "POST",
+        headers: apiHeaders,
+      }).then((r) => r.json()),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+  });
+
   // Date range for the current month
   const startDate = new Date(currentYear, currentMonth, 1).toISOString();
   const endDate = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59).toISOString();
@@ -164,14 +226,15 @@ export default function CalendarPage() {
     currentYear === today.getFullYear();
 
   return (
-    <div className="flex h-full flex-col p-8 space-y-6">
+    <div className="flex h-full flex-col space-y-6">
+      <PageTour tourId="calendar" />
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tour="calendar-header">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Calendário</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Gerencie seus agendamentos</p>
         </div>
-        <Button asChild>
+        <Button asChild data-tour="calendar-new-btn">
           <Link href="/app/calendar/new">
             <Plus className="size-4" />
             Novo agendamento
@@ -179,9 +242,96 @@ export default function CalendarPage() {
         </Button>
       </div>
 
+      {/* Calendar integrations: Google + Outlook */}
+      <div className="space-y-3">
+        {gcStatus?.connected ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-3">
+            <div className="flex items-center gap-2 text-emerald-400 text-sm font-medium">
+              <CalendarCheck className="size-4 shrink-0" />
+              Google Agenda conectado
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={() => importMutation.mutate()}
+                disabled={importMutation.isPending}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-background/50 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                {importMutation.isPending ? <RefreshCw className="size-3 animate-spin" /> : <Download className="size-3" />}
+                {importMutation.data ? `${(importMutation.data as { imported?: number }).imported} importados` : "Importar"}
+              </button>
+              <button
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending}
+                className="flex items-center gap-1.5 rounded-lg gradient-primary px-3 py-1.5 text-xs font-medium text-white glow-primary-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {syncMutation.isPending ? <RefreshCw className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                {(() => {
+                  const d = syncMutation.data as { synced?: number; failed?: number } | undefined;
+                  if (d?.failed && d.failed > 0) return `${d.synced} ok, ${d.failed} falha(s)`;
+                  if (d?.synced != null) return `${d.synced} sincronizados`;
+                  return "Sincronizar";
+                })()}
+              </button>
+            </div>
+            {syncMutation.data && Array.isArray((syncMutation.data as { errors?: string[] }).errors) && (syncMutation.data as { errors: string[] }).errors.length > 0 && (
+              <div className="w-full mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                <p className="font-medium mb-1">Alguns itens não sincronizaram (veja o terminal do backend)</p>
+                <ul className="list-disc pl-4 space-y-0.5 text-amber-200/90">
+                  {(syncMutation.data as { errors: string[] }).errors.map((e, i) => (
+                    <li key={i} className="break-all">{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <AlertCircle className="size-4 shrink-0 text-amber-400" />
+              Conecte Google Agenda ou Outlook para sincronizar agendamentos
+            </div>
+            <Button asChild size="sm" variant="outline" className="ml-auto border-white/[0.08] bg-white/[0.03] hover:bg-accent text-xs gap-1.5">
+              <Link href="/app/integrations"><ExternalLink className="size-3" />Conectar</Link>
+            </Button>
+          </div>
+        )}
+
+        {outlookStatus?.connected ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-sky-500/20 bg-sky-500/[0.06] px-4 py-3">
+            <div className="flex items-center gap-2 text-sky-400 text-sm font-medium">
+              <CalendarCheck className="size-4 shrink-0" />
+              Microsoft 365 / Outlook conectado
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={() => outlookImportMutation.mutate()}
+                disabled={outlookImportMutation.isPending}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-background/50 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                {outlookImportMutation.isPending ? <RefreshCw className="size-3 animate-spin" /> : <Download className="size-3" />}
+                {outlookImportMutation.data ? `${(outlookImportMutation.data as { imported?: number }).imported} importados` : "Importar"}
+              </button>
+              <button
+                onClick={() => outlookSyncMutation.mutate()}
+                disabled={outlookSyncMutation.isPending}
+                className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 transition-opacity disabled:opacity-50"
+              >
+                {outlookSyncMutation.isPending ? <RefreshCw className="size-3 animate-spin" /> : <RefreshCw className="size-3" />}
+                {(() => {
+                  const d = outlookSyncMutation.data as { synced?: number; failed?: number } | undefined;
+                  if (d?.failed && d.failed > 0) return `${d.synced} ok, ${d.failed} falha(s)`;
+                  if (d?.synced != null) return `${d.synced} sincronizados`;
+                  return "Sincronizar";
+                })()}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         {/* Calendar Grid */}
-        <div className="glass-card rounded-2xl p-6">
+        <div className="glass-card rounded-2xl p-6" data-tour="calendar-view">
           {/* Month nav */}
           <div className="mb-6 flex items-center justify-between">
             <button
@@ -340,13 +490,25 @@ export default function CalendarPage() {
                     )}
                   </div>
 
-                  <div className="mt-3 flex items-center gap-2">
+                  <div className="mt-3 flex items-center gap-2 flex-wrap">
                     <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium", TYPE_COLORS[appt.type])}>
                       {TYPE_LABELS[appt.type]}
                     </span>
                     <span className={cn("inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium", STATUS_COLORS[appt.status])}>
                       {STATUS_LABELS[appt.status]}
                     </span>
+                    {appt.googleEventId && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-400">
+                        <CalendarCheck className="size-2.5" />
+                        Google
+                      </span>
+                    )}
+                    {appt.outlookEventId && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-400">
+                        <CalendarCheck className="size-2.5" />
+                        Outlook
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Contact } from '../../crm/entities/contact.entity';
 
@@ -21,6 +22,7 @@ export enum CallStatus {
   IN_PROGRESS = 'in_progress',
 }
 
+@Index(['tenantId'])
 @Entity('calls')
 export class Call {
   @PrimaryGeneratedColumn('uuid')
@@ -57,6 +59,18 @@ export class Call {
 
   @Column({ name: 'ended_at', type: 'timestamp', nullable: true })
   endedAt: Date | null;
+
+  @Column({ name: 'external_sid', type: 'varchar', length: 64, nullable: true })
+  externalSid: string | null;
+
+  @Column({ name: 'recording_url', type: 'text', nullable: true })
+  recordingUrl: string | null;
+
+  @Column({ name: 'transcription_text', type: 'text', nullable: true })
+  transcriptionText: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  metadata: Record<string, unknown> | null;
 
   @Column({ type: 'text', nullable: true })
   notes: string;

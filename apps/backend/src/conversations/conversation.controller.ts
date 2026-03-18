@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -106,9 +107,11 @@ export class ConversationController {
     @Body() dto: CreateOpportunityFromConversationDto,
   ) {
     const conversation = await this.conversationService.findOne(tenantId, id);
-    const pipeline = await this.pipelineService.findDefault(tenantId);
+    const pipeline = dto.pipelineId
+      ? await this.pipelineService.findOne(tenantId, dto.pipelineId)
+      : await this.pipelineService.findDefault(tenantId);
     if (!pipeline?.stages?.length) {
-      throw new Error('Pipeline padrão não encontrado ou sem estágios');
+      throw new BadRequestException('Pipeline não encontrado ou sem estágios');
     }
     const firstStage = [...pipeline.stages].sort((a, b) => a.order - b.order)[0];
     return this.opportunityService.create(tenantId, {

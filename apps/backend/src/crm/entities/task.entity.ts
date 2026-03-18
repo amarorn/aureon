@@ -6,10 +6,12 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Contact } from './contact.entity';
 import { Opportunity } from './opportunity.entity';
 
+@Index(['tenantId'])
 @Entity('tasks')
 export class Task {
   @PrimaryGeneratedColumn('uuid')
@@ -35,6 +37,9 @@ export class Task {
 
   @Column({ name: 'is_completed', default: false })
   isCompleted: boolean;
+
+  @Column({ name: 'overdue_notified_at', type: 'timestamp', nullable: true })
+  overdueNotifiedAt: Date | null;
 
   @Column({ type: 'int', default: 0 })
   priority: number;

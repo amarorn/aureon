@@ -104,6 +104,9 @@ Comparativo entre o plano técnico/escopo e o que está implementado.
 - [x] Google Business Profile
 - [x] Facebook Ads
 - [x] Google Ads
+- [x] **LinkedIn OAuth** — OpenID + opcional `r_marketing_leadgen_automation` (`INTEGRATION_LINKEDIN_LEADGEN_SCOPES=true` + reconectar).
+- [x] **LinkedIn Lead Gen batch** — `PUT .../linkedin/leadgen-config` (ownerUrn, leadType, formUrn), `GET .../lead-form-responses`, `POST .../sync-leadgen-batch` mapeia `formResponse.answers` → Contact (dedupe e-mail). UI de ownerUrn/disparo ainda roadmap.
+- [ ] **Zoom / Google Meet** — roadmap na UI: reunião automática ao agendar; link na proposta. Calendar OAuth existe; falta `conferenceData` (Meet) e/ou Zoom API + campo em proposta/agendamento.
 
 ### Segurança
 

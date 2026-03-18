@@ -11,7 +11,7 @@ export default function ConversationPage() {
   const id = params.id as string;
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
         <div className="mb-6 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             Voltar

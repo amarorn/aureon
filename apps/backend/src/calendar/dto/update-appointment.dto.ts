@@ -1,11 +1,4 @@
-export class UpdateAppointmentDto {
-  title?: string;
-  description?: string;
-  startAt?: string;
-  endAt?: string;
-  type?: 'meeting' | 'call' | 'demo' | 'follow_up' | 'other';
-  status?: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
-  contactId?: string;
-  location?: string;
-  notes?: string;
-}
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateAppointmentDto } from './create-appointment.dto';
+
+export class UpdateAppointmentDto extends PartialType(CreateAppointmentDto) {}

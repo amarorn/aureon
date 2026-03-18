@@ -34,6 +34,11 @@ export class TaskController {
     return this.taskService.findAll(tenantId, contactId, opportunityId);
   }
 
+  @Delete('bulk/automatic')
+  deleteAutomaticTasks(@TenantId() tenantId: string) {
+    return this.taskService.deleteByTitle(tenantId, 'Tarefa automática');
+  }
+
   @Get(':id')
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.taskService.findOne(tenantId, id);

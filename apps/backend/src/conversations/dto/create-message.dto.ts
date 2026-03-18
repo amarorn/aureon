@@ -21,6 +21,18 @@ export class CreateMessageDto {
   content: string;
 
   @IsOptional()
+  @IsString()
+  recipient?: string;
+
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @IsOptional()
+  @IsString()
+  cc?: string;
+
+  @IsOptional()
   @IsUUID()
   templateId?: string;
 

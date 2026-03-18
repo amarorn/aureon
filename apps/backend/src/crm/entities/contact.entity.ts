@@ -7,12 +7,14 @@ import {
   ManyToMany,
   OneToMany,
   JoinTable,
+  Index,
 } from 'typeorm';
 import { Tag } from './tag.entity';
 import { Opportunity } from './opportunity.entity';
 import { Interaction } from './interaction.entity';
 import { Task } from './task.entity';
 
+@Index(['tenantId'])
 @Entity('contacts')
 export class Contact {
   @PrimaryGeneratedColumn('uuid')

@@ -10,4 +10,8 @@ export class CreateConversationDto {
   @IsOptional()
   @IsString()
   assignedTo?: string;
+
+  @IsOptional()
+  @IsString()
+  externalId?: string;
 }

@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEnum,
   IsArray,
+  IsObject,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -12,11 +13,30 @@ import {
   WorkflowActionType,
 } from '../entities/workflow.entity';
 
+export class WorkflowTriggerConfigDto {
+  @IsOptional()
+  @IsString()
+  pipelineId?: string;
+
+  @IsOptional()
+  @IsString()
+  stageId?: string;
+
+  @IsOptional()
+  @IsString()
+  fromStageId?: string;
+
+  @IsOptional()
+  @IsString()
+  toStageId?: string;
+}
+
 export class WorkflowActionConfigDto {
   @IsEnum(WorkflowActionType)
   type: WorkflowActionType;
 
   @IsOptional()
+  @IsObject()
   config?: Record<string, unknown>;
 }
 
@@ -32,12 +52,9 @@ export class CreateWorkflowDto {
   triggerType: WorkflowTriggerType;
 
   @IsOptional()
-  triggerConfig?: {
-    pipelineId?: string;
-    stageId?: string;
-    fromStageId?: string;
-    toStageId?: string;
-  };
+  @ValidateNested()
+  @Type(() => WorkflowTriggerConfigDto)
+  triggerConfig?: WorkflowTriggerConfigDto;
 
   @IsArray()
   @ValidateNested({ each: true })

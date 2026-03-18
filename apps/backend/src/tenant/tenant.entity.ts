@@ -20,6 +20,9 @@ export class Tenant {
   @Column({ default: true })
   active: boolean;
 
+  @Column({ type: 'jsonb', nullable: true })
+  oauthConfig: Record<string, unknown> | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

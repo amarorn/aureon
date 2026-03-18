@@ -36,6 +36,7 @@ export default function EditWorkflowPage() {
     actions: [] as { type: string; config: Record<string, unknown> }[],
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["workflow", id],
@@ -68,13 +69,19 @@ export default function EditWorkflowPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch(`${API_URL}/workflows/${id}`, {
         method: "PUT",
         headers: apiHeaders,
         body: JSON.stringify(form),
       });
-      if (res.ok) router.push("/app/automation");
+      if (res.ok) {
+        router.push("/app/automation");
+        return;
+      }
+      const errData = await res.json().catch(() => ({}));
+      setError(Array.isArray(errData.message) ? errData.message.join(" ") : errData.message || "Erro ao salvar");
     } finally {
       setSaving(false);
     }
@@ -99,7 +106,7 @@ export default function EditWorkflowPage() {
   if (!data) return <p className="p-8 text-destructive">Workflow não encontrado.</p>;
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="space-y-8">
         <div className="mb-6">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             Voltar
@@ -111,6 +118,11 @@ export default function EditWorkflowPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="name">Nome *</Label>
                 <Input
