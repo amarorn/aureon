@@ -46,10 +46,10 @@ import { AuthModule } from './auth/auth.module';
         password: config.get('DB_PASSWORD', 'aureon'),
         database: config.get('DB_NAME', 'aureon'),
         autoLoadEntities: true,
-        synchronize: config.get('NODE_ENV') === 'development',
+        synchronize: config.get('NODE_ENV', 'development') === 'development',
         logging:
           config.get('DB_LOGGING', 'true') !== 'false' &&
-          config.get('NODE_ENV') === 'development',
+          config.get('NODE_ENV', 'development') === 'development',
       }),
       inject: [ConfigService],
     }),
