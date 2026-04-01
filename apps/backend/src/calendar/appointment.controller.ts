@@ -16,9 +16,12 @@ import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('appointments')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('calendar.core')
 export class AppointmentController {
   constructor(
     private readonly service: AppointmentService,

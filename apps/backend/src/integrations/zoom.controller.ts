@@ -2,9 +2,12 @@ import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { ZoomService } from './zoom.service';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('integrations/zoom')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('integrations.core')
 export class ZoomController {
   constructor(private readonly zoom: ZoomService) {}
 

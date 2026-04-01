@@ -20,6 +20,8 @@ import { TwilioService } from './twilio.service';
 import { CreateIntegrationDto } from './dto/create-integration.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 import { IntegrationProvider } from './entities/integration.entity';
 import { EmailDeliveryService } from './email-delivery.service';
 import { ProposalSignatureService } from './proposal-signature.service';
@@ -42,13 +44,15 @@ export class IntegrationController {
   ) {}
 
   @Post()
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   create(@TenantId() tenantId: string, @Body() dto: CreateIntegrationDto) {
     return this.integrationService.create(tenantId, dto);
   }
 
   @Get()
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   findAll(@TenantId() tenantId: string) {
     return this.integrationService.findAll(tenantId);
   }
@@ -56,7 +60,8 @@ export class IntegrationController {
   // ── OAuth flow ─────────────────────────────────────────────────────────────
 
   @Put('oauth-credentials')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async setTenantOAuthCredentials(
     @TenantId() tenantId: string,
     @Body()
@@ -67,7 +72,8 @@ export class IntegrationController {
   }
 
   @Get('oauth/url/:provider')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async getOAuthUrl(
     @TenantId() tenantId: string,
     @Param('provider') provider: IntegrationProvider,
@@ -115,14 +121,16 @@ export class IntegrationController {
   // ── WhatsApp ───────────────────────────────────────────────────────────────
 
   @Get('whatsapp/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async whatsappStatus(@TenantId() tenantId: string) {
     const connected = await this.whatsApp.isConnected(tenantId);
     return { connected };
   }
 
   @Post('whatsapp/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveWhatsAppConfig(
     @TenantId() tenantId: string,
     @Body() body: { phoneNumberId: string; accessToken: string },
@@ -132,7 +140,8 @@ export class IntegrationController {
   }
 
   @Post('whatsapp/messages')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   sendWhatsApp(
     @TenantId() tenantId: string,
     @Body() body: { to: string; text: string },
@@ -141,7 +150,8 @@ export class IntegrationController {
   }
 
   @Post('whatsapp/template')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   sendTemplate(
     @TenantId() tenantId: string,
     @Body()
@@ -158,14 +168,16 @@ export class IntegrationController {
   // ── Asaas ──────────────────────────────────────────────────────────────────
 
   @Get('asaas/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async asaasStatus(@TenantId() tenantId: string) {
     const connected = await this.asaas.isConnected(tenantId);
     return { connected };
   }
 
   @Post('asaas/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveAsaasConfig(
     @TenantId() tenantId: string,
     @Body() body: { apiKey: string; environment?: 'sandbox' | 'production' },
@@ -175,7 +187,8 @@ export class IntegrationController {
   }
 
   @Post('asaas/charges')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   createCharge(
     @TenantId() tenantId: string,
     @Body()
@@ -193,7 +206,8 @@ export class IntegrationController {
   }
 
   @Get('asaas/charges/:chargeId')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   getCharge(@TenantId() tenantId: string, @Param('chargeId') chargeId: string) {
     return this.asaas.getCharge(tenantId, chargeId);
   }
@@ -201,14 +215,16 @@ export class IntegrationController {
   // ── Mercado Pago ───────────────────────────────────────────────────────
 
   @Get('mercadopago/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async mercadopagoStatus(@TenantId() tenantId: string) {
     const connected = await this.mercadopago.isConnected(tenantId);
     return { connected };
   }
 
   @Post('mercadopago/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveMercadoPagoConfig(
     @TenantId() tenantId: string,
     @Body() body: { accessToken: string },
@@ -220,14 +236,16 @@ export class IntegrationController {
   // ── Stripe ─────────────────────────────────────────────────────────────
 
   @Get('stripe/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async stripeStatus(@TenantId() tenantId: string) {
     const connected = await this.stripe.isConnected(tenantId);
     return { connected };
   }
 
   @Post('stripe/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveStripeConfig(
     @TenantId() tenantId: string,
     @Body() body: { secretKey: string },
@@ -239,7 +257,8 @@ export class IntegrationController {
   // ── Team notifications ────────────────────────────────────────────────────
 
   @Get('slack/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async slackStatus(@TenantId() tenantId: string) {
     const connected = await this.teamNotifications.isConnected(
       tenantId,
@@ -249,7 +268,8 @@ export class IntegrationController {
   }
 
   @Post('slack/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveSlackConfig(
     @TenantId() tenantId: string,
     @Body() body: { webhookUrl: string },
@@ -259,7 +279,8 @@ export class IntegrationController {
   }
 
   @Get('microsoft-teams/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async microsoftTeamsStatus(@TenantId() tenantId: string) {
     const connected = await this.teamNotifications.isConnected(
       tenantId,
@@ -269,7 +290,8 @@ export class IntegrationController {
   }
 
   @Post('microsoft-teams/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveMicrosoftTeamsConfig(
     @TenantId() tenantId: string,
     @Body() body: { webhookUrl: string },
@@ -281,14 +303,16 @@ export class IntegrationController {
   // ── Telegram ──────────────────────────────────────────────────────────────
 
   @Get('telegram/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async telegramStatus(@TenantId() tenantId: string) {
     const connected = await this.telegram.isConnected(tenantId);
     return { connected };
   }
 
   @Post('telegram/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveTelegramConfig(
     @TenantId() tenantId: string,
     @Body() body: { botToken: string },
@@ -298,7 +322,8 @@ export class IntegrationController {
   }
 
   @Post('telegram/messages')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   sendTelegram(
     @TenantId() tenantId: string,
     @Body() body: { chatId: string; text: string },
@@ -309,14 +334,16 @@ export class IntegrationController {
   // ── Twilio (SMS + VoIP) ───────────────────────────────────────────────────
 
   @Get('twilio/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async twilioStatus(@TenantId() tenantId: string) {
     const connected = await this.twilio.isConnected(tenantId);
     return { connected };
   }
 
   @Post('twilio/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveTwilioConfig(
     @TenantId() tenantId: string,
     @Body() body: { accountSid: string; authToken: string; phoneNumber: string },
@@ -331,7 +358,8 @@ export class IntegrationController {
   }
 
   @Post('twilio/sms')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async sendTwilioSms(
     @TenantId() tenantId: string,
     @Body() body: { to: string; body: string },
@@ -342,7 +370,8 @@ export class IntegrationController {
   // ── Email providers ───────────────────────────────────────────────────────
 
   @Get('sendgrid/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async sendGridStatus(@TenantId() tenantId: string) {
     const connected = await this.emailDelivery.isConnected(
       tenantId,
@@ -352,7 +381,8 @@ export class IntegrationController {
   }
 
   @Post('sendgrid/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveSendGridConfig(
     @TenantId() tenantId: string,
     @Body()
@@ -368,7 +398,8 @@ export class IntegrationController {
   }
 
   @Get('amazon-ses/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async amazonSesStatus(@TenantId() tenantId: string) {
     const connected = await this.emailDelivery.isConnected(
       tenantId,
@@ -378,7 +409,8 @@ export class IntegrationController {
   }
 
   @Post('amazon-ses/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveAmazonSesConfig(
     @TenantId() tenantId: string,
     @Body()
@@ -397,7 +429,8 @@ export class IntegrationController {
   }
 
   @Post('email/test')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async sendTestEmail(
     @TenantId() tenantId: string,
     @Body()
@@ -418,7 +451,8 @@ export class IntegrationController {
   // ── Signature providers ───────────────────────────────────────────────────
 
   @Get('clicksign/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async clickSignStatus(@TenantId() tenantId: string) {
     const connected = await this.proposalSignature.isConnected(
       tenantId,
@@ -428,7 +462,8 @@ export class IntegrationController {
   }
 
   @Post('clicksign/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveClickSignConfig(
     @TenantId() tenantId: string,
     @Body()
@@ -442,7 +477,8 @@ export class IntegrationController {
   }
 
   @Get('docusign/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async docuSignStatus(@TenantId() tenantId: string) {
     const connected = await this.proposalSignature.isConnected(
       tenantId,
@@ -452,7 +488,8 @@ export class IntegrationController {
   }
 
   @Post('docusign/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   async saveDocuSignConfig(
     @TenantId() tenantId: string,
     @Body()
@@ -470,19 +507,22 @@ export class IntegrationController {
   // ── Generic ────────────────────────────────────────────────────────────────
 
   @Get(':id')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   findOne(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.integrationService.findOne(tenantId, id);
   }
 
   @Post(':id/disconnect')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   disconnect(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.integrationService.disconnect(tenantId, id);
   }
 
   @Delete(':id')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('integrations.core')
   remove(@TenantId() tenantId: string, @Param('id') id: string) {
     return this.integrationService.remove(tenantId, id);
   }

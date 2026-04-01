@@ -11,9 +11,12 @@ import { CallQueueService } from './call-queue.service';
 import { AddToQueueDto } from './dto/add-to-queue.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('call-queue')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('telephony.core')
 export class CallQueueController {
   constructor(private readonly queueService: CallQueueService) {}
 

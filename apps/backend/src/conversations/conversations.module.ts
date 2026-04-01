@@ -7,6 +7,7 @@ import {
   MessageAttachment,
   MessageTemplate,
 } from './entities';
+import { AuthModule } from '../auth/auth.module';
 import { CrmModule } from '../crm/crm.module';
 import { Contact } from '../crm/entities/contact.entity';
 import { EmailInboxModule } from '../email-inbox/email-inbox.module';
@@ -24,6 +25,7 @@ import { WebchatSyncService } from './webchat-sync.service';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       Channel,
       Conversation,

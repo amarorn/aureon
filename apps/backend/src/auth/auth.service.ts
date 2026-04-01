@@ -305,9 +305,7 @@ export class AuthService {
     await this.userRepo.save(user);
 
     const tokens = await this.issueTokens(user, meta);
-    const features = user.tenantId
-      ? Array.from(await this.features.getEffectiveFeatureCodes(user.tenantId))
-      : [];
+    const features = await this.resolveEffectiveFeatureCodes(user);
 
     let tenant: {
       id: string;
@@ -422,7 +420,22 @@ export class AuthService {
     }
   }
 
-  async getMe(userId: string): Promise<{
+  private async resolveEffectiveFeatureCodes(
+    user: User,
+    opts?: { headerTenantId?: string | null },
+  ): Promise<string[]> {
+    let tenantId: string | null = user.tenantId;
+    if (user.isPlatformUser && opts?.headerTenantId?.trim()) {
+      tenantId = opts.headerTenantId.trim();
+    }
+    if (!tenantId) return [];
+    return Array.from(await this.features.getEffectiveFeatureCodes(tenantId));
+  }
+
+  async getMe(
+    userId: string,
+    opts?: { headerTenantId?: string | null },
+  ): Promise<{
     user: ReturnType<AuthService['toPublicUser']>;
     tenant: {
       id: string;
@@ -439,9 +452,7 @@ export class AuthService {
       relations: ['tenant'],
     });
     if (!user) throw new UnauthorizedException();
-    const features = user.tenantId
-      ? Array.from(await this.features.getEffectiveFeatureCodes(user.tenantId))
-      : [];
+    const features = await this.resolveEffectiveFeatureCodes(user, opts);
     let tenant: {
       id: string;
       name: string;

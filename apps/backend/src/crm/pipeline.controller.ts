@@ -11,9 +11,12 @@ import { PipelineService } from './pipeline.service';
 import { CreatePipelineDto } from './dto/create-pipeline.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('pipelines')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('crm.opportunities')
 export class PipelineController {
   constructor(private readonly pipelineService: PipelineService) {}
 

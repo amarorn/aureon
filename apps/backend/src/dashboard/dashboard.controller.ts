@@ -2,9 +2,12 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { DashboardService, DashboardFilters } from './dashboard.service';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('dashboard')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('crm.contacts')
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 

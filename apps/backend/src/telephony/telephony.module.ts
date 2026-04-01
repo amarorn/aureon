@@ -10,12 +10,14 @@ import { CallQueueService } from './call-queue.service';
 import { CallQueueController } from './call-queue.controller';
 import { TwilioCallService } from './twilio-call.service';
 import { TwilioWebhookController } from './twilio-webhook.controller';
+import { AuthModule } from '../auth/auth.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 import { SmsMessageService } from './sms-message.service';
 import { TelephonyController } from './telephony.controller';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([Call, CallQueueItem, SmsMessage, Contact]),
     IntegrationsModule,
   ],

@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { API_URL, getApiHeaders } from "@/lib/api";
+import { API_URL, getApiHeaders, getImpersonatedTenantId } from "@/lib/api";
 
 const STORAGE_KEY = "aureon_auth";
 

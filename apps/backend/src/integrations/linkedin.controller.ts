@@ -2,9 +2,12 @@ import { Controller, Get, Post, Put, Body, Query, UseGuards } from '@nestjs/comm
 import { LinkedInService } from './linkedin.service';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('integrations/linkedin')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('integrations.core')
 export class LinkedInController {
   constructor(private readonly linkedin: LinkedInService) {}
 

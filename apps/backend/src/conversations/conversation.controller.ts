@@ -18,12 +18,15 @@ import { CreateTaskFromConversationDto } from './dto/create-task-from-conversati
 import { CreateOpportunityFromConversationDto } from './dto/create-opportunity-from-conversation.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 import { TaskService } from '../crm/task.service';
 import { OpportunityService } from '../crm/opportunity.service';
 import { PipelineService } from '../crm/pipeline.service';
 
 @Controller('conversations')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('inbox.core')
 export class ConversationController {
   constructor(
     private readonly conversationService: ConversationService,

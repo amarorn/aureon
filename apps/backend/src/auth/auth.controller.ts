@@ -48,7 +48,10 @@ export class AuthController {
   @Get('me')
   @UseGuards(RequireAuthGuard)
   async me(@Req() req: Request & { userJwt: { sub: string } }) {
-    return this.auth.getMe(req.userJwt.sub);
+    const raw = req.headers['x-tenant-id'];
+    const headerTenantId =
+      typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
+    return this.auth.getMe(req.userJwt.sub, { headerTenantId });
   }
 
   @Get('packages')

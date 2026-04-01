@@ -9,9 +9,12 @@ import {
 import { GoogleAnalyticsService } from './google-analytics.service';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('analytics/google')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('analytics.google')
 export class GoogleAnalyticsController {
   constructor(private readonly ga: GoogleAnalyticsService) {}
 

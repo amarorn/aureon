@@ -11,9 +11,12 @@ import { EmailCampaignService } from './email-campaign.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('email-campaigns')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('email.marketing')
 export class EmailCampaignController {
   constructor(private readonly service: EmailCampaignService) {}
 

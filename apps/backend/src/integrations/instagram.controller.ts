@@ -14,6 +14,8 @@ import type { Response } from 'express';
 import { InstagramService } from './instagram.service';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('integrations/instagram')
 export class InstagramController {
@@ -24,7 +26,8 @@ export class InstagramController {
   // ── Status ─────────────────────────────────────────────────────────────────
 
   @Get('status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('inbox.core')
   async status(@TenantId() tenantId: string) {
     const connected = await this.instagramService.isConnected(tenantId);
     const info = connected ? await this.instagramService.getAccountInfo(tenantId) : null;
@@ -34,7 +37,8 @@ export class InstagramController {
   // ── Config ─────────────────────────────────────────────────────────────────
 
   @Post('config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('inbox.core')
   async saveConfig(
     @TenantId() tenantId: string,
     @Body() body: { igUserId: string; pageAccessToken: string },
@@ -92,7 +96,8 @@ export class InstagramController {
   // ── Manual sync ────────────────────────────────────────────────────────────
 
   @Post('sync')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('inbox.core')
   @HttpCode(HttpStatus.OK)
   async sync(@TenantId() tenantId: string) {
     return this.instagramService.syncConversations(tenantId);
@@ -101,7 +106,8 @@ export class InstagramController {
   // ── Send DM ────────────────────────────────────────────────────────────────
 
   @Post('send')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('inbox.core')
   async send(
     @TenantId() tenantId: string,
     @Body() body: { recipientIgsid: string; text: string },

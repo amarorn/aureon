@@ -11,9 +11,12 @@ import { ReviewRequestService } from './review-request.service';
 import { CreateReviewRequestDto, CompleteReviewDto } from './dto/create-review-request.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('reputation')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('reputation.core')
 export class ReviewRequestController {
   constructor(private readonly service: ReviewRequestService) {}
 

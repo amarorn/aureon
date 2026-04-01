@@ -2,9 +2,12 @@ import { Controller, Get, Put, Query, Body, UseGuards } from '@nestjs/common';
 import { TikTokAdsService } from './tiktok-ads.service';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('ads/tiktok')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('ads.tiktok')
 export class TikTokAdsController {
   constructor(private readonly ads: TikTokAdsService) {}
 

@@ -13,9 +13,12 @@ import { TwilioCallService } from './twilio-call.service';
 import { CreateCallDto } from './dto/create-call.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('calls')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('telephony.core')
 export class CallController {
   constructor(
     private readonly callService: CallService,

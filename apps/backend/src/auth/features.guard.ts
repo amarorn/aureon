@@ -4,6 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { FeaturesService } from './features.service';
 import { UserRole } from './auth.types';
 import { FEATURE_KEY } from './features.decorator';
@@ -13,6 +14,7 @@ export class FeaturesGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private readonly features: FeaturesService,
+    private readonly config: ConfigService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -26,8 +28,10 @@ export class FeaturesGuard implements CanActivate {
       tenantId?: string | null;
       isPlatformUser?: boolean;
       role?: UserRole;
-    };
-    if (!jwt) return false;
+    } | undefined;
+    if (!jwt) {
+      return this.config.get<string>('AUTH_LEGACY_TENANT') === 'true';
+    }
     if (
       !this.features.shouldEnforcePackage(
         Boolean(jwt.isPlatformUser),

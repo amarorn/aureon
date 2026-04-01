@@ -2,9 +2,12 @@ import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
 import { GoogleAdsService } from './google-ads.service';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('ads/google')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('ads.google')
 export class GoogleAdsController {
   constructor(private readonly ads: GoogleAdsService) {}
 

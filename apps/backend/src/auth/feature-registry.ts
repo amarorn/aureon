@@ -12,6 +12,11 @@ export const FEATURE_REGISTRY: Record<
   'analytics.google': { label: 'Google Analytics', group: 'Marketing' },
   'proposals.core': { label: 'Propostas', group: 'Vendas' },
   'reputation.core': { label: 'Reputação / reviews', group: 'Marketing' },
+  'email.marketing': { label: 'E-mail marketing', group: 'Marketing' },
+  'telephony.core': { label: 'Telefonia / voz', group: 'Comunicação' },
+  'integrations.core': { label: 'Integrações', group: 'Sistema' },
+  'business.google': { label: 'Google Business Profile', group: 'Marketing' },
+  'ads.tiktok': { label: 'TikTok Ads', group: 'Marketing' },
 };
 
 export function isKnownFeatureCode(code: string): boolean {

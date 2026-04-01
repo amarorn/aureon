@@ -2,80 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 import {
-  LayoutDashboard,
-  Users,
-  Kanban,
-  MessageSquare,
-  Phone,
-  Zap,
-  Plug,
-  CalendarDays,
-  Mail,
-  Star,
-  FileCheck,
-  BarChart3,
-  Megaphone,
-  Building2,
   LogOut,
   Sparkles,
   PanelLeftClose,
-  TrendingUp,
   ShieldCheck,
   Package,
+  ChevronDown,
+  Building2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { filterNavByFeatures, mainNavGroups } from "@/lib/nav-config";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
-
-const navGroups = [
-  {
-    label: "Principal",
-    items: [
-      { href: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
-      { href: "/app/contacts", label: "Contatos", icon: Users, exact: false },
-      { href: "/app/opportunities", label: "Oportunidades", icon: Kanban, exact: false },
-    ],
-  },
-  {
-    label: "Comunicação",
-    items: [
-      {
-        href: "/app/inbox",
-        label: "Inbox",
-        icon: MessageSquare,
-        exact: false,
-        children: [
-          { href: "/app/inbox/channels", label: "Canais" },
-          { href: "/app/inbox/templates", label: "Templates" },
-        ],
-      },
-      { href: "/app/telephony", label: "Telefonia", icon: Phone, exact: false },
-      { href: "/app/calendar", label: "Calendário", icon: CalendarDays, exact: false },
-    ],
-  },
-  {
-    label: "Marketing",
-    items: [
-      { href: "/app/email-marketing", label: "Email Marketing", icon: Mail, exact: false },
-      { href: "/app/reputation", label: "Reputação", icon: Star, exact: false },
-      { href: "/app/proposals", label: "Propostas", icon: FileCheck, exact: false },
-    ],
-  },
-  {
-    label: "Sistema",
-    items: [
-      { href: "/app/automation", label: "Automação", icon: Zap, exact: false },
-      { href: "/app/integrations", label: "Integrações", icon: Plug, exact: false },
-      { href: "/app/analytics/google", label: "Google Analytics", icon: BarChart3, exact: false },
-      { href: "/app/ads/google", label: "Google Ads", icon: Megaphone, exact: false },
-      { href: "/app/ads/tiktok", label: "TikTok Ads", icon: TrendingUp, exact: false },
-      { href: "/app/business/google", label: "Business Profile", icon: Building2, exact: false },
-    ],
-  },
-];
 
 interface AppSidebarProps {
   collapsed?: boolean;
@@ -92,7 +33,12 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, tenant, logout } = useAuth();
+  const { user, tenant, logout, hasFeature } = useAuth();
+
+  const navGroups = useMemo(
+    () => filterNavByFeatures(mainNavGroups, hasFeature),
+    [hasFeature],
+  );
 
   const displayName = user?.name?.trim() || user?.email || "Usuário";
   const displaySubtitle = user?.isPlatformUser

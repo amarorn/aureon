@@ -12,9 +12,12 @@ import { EmailTemplateService } from './email-template.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('email-templates')
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, FeaturesGuard)
+@RequireFeature('email.marketing')
 export class EmailTemplateController {
   constructor(private readonly service: EmailTemplateService) {}
 

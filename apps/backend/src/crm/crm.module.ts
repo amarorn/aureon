@@ -22,9 +22,11 @@ import { InteractionService } from './interaction.service';
 import { InteractionController } from './interaction.controller';
 import { TaskService } from './task.service';
 import { TaskController } from './task.controller';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     EventsModule,
     TypeOrmModule.forFeature([
       Contact,

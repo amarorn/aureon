@@ -9,10 +9,12 @@ import { EmailCampaignController } from './email-campaign.controller';
 import { EmailCampaignTrackingController } from './email-campaign-tracking.controller';
 import { EmailTemplateController } from './email-template.controller';
 import { Contact } from '../crm/entities';
+import { AuthModule } from '../auth/auth.module';
 import { IntegrationsModule } from '../integrations/integrations.module';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       EmailCampaign,
       EmailCampaignRecipient,

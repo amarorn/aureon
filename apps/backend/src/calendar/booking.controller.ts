@@ -12,6 +12,8 @@ import {
 import { BookingService, BookingProvider } from './booking.service';
 import { TenantId } from '../common/decorators/tenant.decorator';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { FeaturesGuard } from '../auth/features.guard';
+import { RequireFeature } from '../auth/features.decorator';
 
 @Controller('integrations')
 export class BookingController {
@@ -22,13 +24,15 @@ export class BookingController {
   // ── Calendly ───────────────────────────────────────────────────────────────
 
   @Get('calendly/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('calendar.core')
   calendlyStatus(@TenantId() tenantId: string) {
     return this.booking.getStatus(tenantId, 'calendly');
   }
 
   @Post('calendly/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('calendar.core')
   async calendlyConfig(
     @TenantId() tenantId: string,
     @Body() body: { apiKey: string; bookingUrl: string },
@@ -42,13 +46,15 @@ export class BookingController {
   // ── Cal.com ────────────────────────────────────────────────────────────────
 
   @Get('calcom/status')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('calendar.core')
   calcomStatus(@TenantId() tenantId: string) {
     return this.booking.getStatus(tenantId, 'cal_com');
   }
 
   @Post('calcom/config')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('calendar.core')
   async calcomConfig(
     @TenantId() tenantId: string,
     @Body() body: { apiKey: string; bookingUrl: string; baseUrl?: string },
@@ -62,7 +68,8 @@ export class BookingController {
   // ── Shared endpoints ───────────────────────────────────────────────────────
 
   @Get('booking/link')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('calendar.core')
   getBookingLink(
     @TenantId() tenantId: string,
     @Query('provider') provider?: string,
@@ -75,7 +82,8 @@ export class BookingController {
   }
 
   @Post('booking/sync')
-  @UseGuards(TenantGuard)
+  @UseGuards(TenantGuard, FeaturesGuard)
+  @RequireFeature('calendar.core')
   @HttpCode(HttpStatus.OK)
   sync(
     @TenantId() tenantId: string,

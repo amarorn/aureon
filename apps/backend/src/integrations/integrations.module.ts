@@ -29,9 +29,11 @@ import { Stage } from '../crm/entities/stage.entity';
 import { Task } from '../crm/entities/task.entity';
 import { CrmModule } from '../crm/crm.module';
 import { TenantModule } from '../tenant/tenant.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
+    AuthModule,
     TypeOrmModule.forFeature([
       Integration,
       Channel,

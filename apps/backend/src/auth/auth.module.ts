@@ -69,6 +69,6 @@ import { RequireAuthGuard } from './require-auth.guard';
     RequireAuthGuard,
     { provide: APP_GUARD, useClass: ParseJwtGuard },
   ],
-  exports: [AuthService, JwtModule, FeaturesService, TypeOrmModule],
+  exports: [AuthService, JwtModule, FeaturesService, FeaturesGuard, TypeOrmModule],
 })
 export class AuthModule {}
