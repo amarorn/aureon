@@ -16,6 +16,7 @@ import { AuditLog } from './entities/audit-log.entity';
 import { Tenant } from '../tenant/tenant.entity';
 import { FeaturesService } from './features.service';
 import { AuditService } from './audit.service';
+import { PackagePlansService } from './package-plans.service';
 import { AdminAccessService } from './admin-access.service';
 import { AdminAccessController } from './admin-access.controller';
 import { UsersManagementService } from './users-management.service';
@@ -57,6 +58,7 @@ import { RequireAuthGuard } from './require-auth.guard';
     UsersManagementController,
   ],
   providers: [
+    PackagePlansService,
     AuthService,
     FeaturesService,
     AuditService,
@@ -69,6 +71,13 @@ import { RequireAuthGuard } from './require-auth.guard';
     RequireAuthGuard,
     { provide: APP_GUARD, useClass: ParseJwtGuard },
   ],
-  exports: [AuthService, JwtModule, FeaturesService, FeaturesGuard, TypeOrmModule],
+  exports: [
+    AuthService,
+    JwtModule,
+    FeaturesService,
+    FeaturesGuard,
+    PackagePlansService,
+    TypeOrmModule,
+  ],
 })
 export class AuthModule {}

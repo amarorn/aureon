@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,7 @@ const stats = [
   { icon: Globe, label: "Países atendidos", value: "12" },
 ];
 
-const PACKAGES = [
-  { value: "starter", label: "Starter — CRM essencial" },
-  { value: "growth", label: "Growth — + Inbox, automação, calendário" },
-  { value: "scale", label: "Scale — + Ads, analytics, propostas, reputação" },
-];
+type PublicPackage = { code: string; name: string };
 
 export default function SignupPage() {
   const router = useRouter();
@@ -29,9 +25,34 @@ export default function SignupPage() {
   const [companyName, setCompanyName] = useState("");
   const [companySlug, setCompanySlug] = useState("");
   const [phone, setPhone] = useState("");
-  const [requestedPackageCode, setRequestedPackageCode] = useState("growth");
+  const [packages, setPackages] = useState<PublicPackage[]>([]);
+  const [requestedPackageCode, setRequestedPackageCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/auth/packages`);
+        const data = await res.json().catch(() => ({}));
+        const list: PublicPackage[] = Array.isArray(data.packages) ? data.packages : [];
+        if (cancelled) return;
+        setPackages(list);
+        setRequestedPackageCode((prev) => {
+          if (prev) return prev;
+          if (!list.length) return "";
+          const growth = list.find((p) => p.code === "growth");
+          return growth?.code ?? list[0].code;
+        });
+      } catch {
+        if (!cancelled) setPackages([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -172,13 +193,19 @@ export default function SignupPage() {
                 id="pkg"
                 value={requestedPackageCode}
                 onChange={(e) => setRequestedPackageCode(e.target.value)}
+                required
+                disabled={packages.length === 0}
                 className="flex h-10 w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 text-sm text-foreground"
               >
-                {PACKAGES.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
+                {packages.length === 0 ? (
+                  <option value="">Carregando planos…</option>
+                ) : (
+                  packages.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.name} ({p.code})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -191,7 +218,7 @@ export default function SignupPage() {
             <Button
               type="submit"
               size="lg"
-              disabled={pending}
+              disabled={pending || packages.length === 0 || !requestedPackageCode}
               className="w-full gradient-primary text-white font-semibold glow-primary-sm border-0"
             >
               {pending ? (

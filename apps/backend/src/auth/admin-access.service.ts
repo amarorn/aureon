@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -23,17 +24,14 @@ import {
 import { AuditService } from './audit.service';
 import { ApproveAccessRequestDto } from './dto/approve-access-request.dto';
 import { RejectAccessRequestDto } from './dto/reject-access-request.dto';
-import {
-  featuresForPackage,
-  isValidPackageCode,
-  PACKAGE_CODES,
-  type PackageCode,
-} from './package-catalog';
+import { isValidPlanSlug } from './package-catalog';
 import { isKnownFeatureCode, listFeatureRegistry } from './feature-registry';
 import { AdminTenantPackageDto } from './dto/admin-tenant-package.dto';
 import { AdminTenantFeaturesDto } from './dto/admin-tenant-features.dto';
 import { AdminUpdatePackageDto } from './dto/admin-update-package.dto';
+import { AdminCreatePackageDto } from './dto/admin-create-package.dto';
 import { FeaturesService } from './features.service';
+import { PackagePlansService } from './package-plans.service';
 
 @Injectable()
 export class AdminAccessService {
@@ -52,31 +50,48 @@ export class AdminAccessService {
     private readonly packagePlanRepo: Repository<PackagePlan>,
     private readonly audit: AuditService,
     private readonly features: FeaturesService,
+    private readonly packagePlans: PackagePlansService,
   ) {}
 
-  async ensurePackagePlansSeeded(): Promise<void> {
-    const names: Record<string, string> = {
-      starter: 'Starter',
-      growth: 'Growth',
-      scale: 'Scale',
-    };
-    for (const code of PACKAGE_CODES) {
-      const exists = await this.packagePlanRepo.findOne({ where: { code } });
-      if (!exists) {
-        await this.packagePlanRepo.save(
-          this.packagePlanRepo.create({
-            code,
-            name: names[code] ?? code,
-            featureCodes: featuresForPackage(code),
-          }),
-        );
-      }
-    }
+  async listPackagePlans() {
+    return this.packagePlans.listPlansOrdered();
   }
 
-  async listPackagePlans() {
-    await this.ensurePackagePlansSeeded();
-    return this.packagePlanRepo.find({ order: { code: 'ASC' } });
+  async createPackagePlan(
+    dto: AdminCreatePackageDto,
+    actorUserId: string,
+  ) {
+    const code = dto.code.trim().toLowerCase();
+    if (!isValidPlanSlug(code)) {
+      throw new BadRequestException(
+        'Código do plano inválido (minúsculas, números e hífen; 2–64 caracteres)',
+      );
+    }
+    const exists = await this.packagePlanRepo.findOne({ where: { code } });
+    if (exists) {
+      throw new ConflictException('Já existe um plano com este código');
+    }
+    for (const fc of dto.featureCodes) {
+      if (!isKnownFeatureCode(fc)) {
+        throw new BadRequestException(`Funcionalidade desconhecida: ${fc}`);
+      }
+    }
+    const row = await this.packagePlanRepo.save(
+      this.packagePlanRepo.create({
+        code,
+        name: dto.name.trim(),
+        featureCodes: dto.featureCodes,
+      }),
+    );
+    await this.audit.log({
+      actorUserId,
+      tenantId: null,
+      action: 'package_plan.create',
+      entityType: 'package_plan',
+      entityId: code,
+      metadata: { name: row.name, featureCount: dto.featureCodes.length },
+    });
+    return row;
   }
 
   async updatePackagePlan(
@@ -84,33 +99,31 @@ export class AdminAccessService {
     dto: AdminUpdatePackageDto,
     actorUserId: string,
   ) {
-    if (!isValidPackageCode(code)) {
+    const normalized = code.trim().toLowerCase();
+    if (!isValidPlanSlug(normalized)) {
       throw new BadRequestException('Código de plano inválido');
     }
-    await this.ensurePackagePlansSeeded();
+    await this.packagePlans.ensureDefaultPlansSeeded();
     for (const fc of dto.featureCodes) {
       if (!isKnownFeatureCode(fc)) {
         throw new BadRequestException(`Funcionalidade desconhecida: ${fc}`);
       }
     }
-    let row = await this.packagePlanRepo.findOne({ where: { code } });
+    const row = await this.packagePlanRepo.findOne({
+      where: { code: normalized },
+    });
     if (!row) {
-      row = this.packagePlanRepo.create({
-        code,
-        name: dto.name,
-        featureCodes: dto.featureCodes,
-      });
-    } else {
-      row.name = dto.name;
-      row.featureCodes = dto.featureCodes;
+      throw new NotFoundException('Plano não encontrado');
     }
+    row.name = dto.name.trim();
+    row.featureCodes = dto.featureCodes;
     await this.packagePlanRepo.save(row);
     await this.audit.log({
       actorUserId,
       tenantId: null,
       action: 'package_plan.update',
       entityType: 'package_plan',
-      entityId: code,
+      entityId: normalized,
       metadata: { name: dto.name, featureCount: dto.featureCodes.length },
     });
     return row;
@@ -150,9 +163,10 @@ export class AdminAccessService {
     dto: ApproveAccessRequestDto,
     actorUserId: string,
   ) {
-    if (!isValidPackageCode(dto.packageCode)) {
-      throw new BadRequestException('packageCode inválido');
+    if (!(await this.packagePlans.isAssignablePackageCode(dto.packageCode))) {
+      throw new BadRequestException('packageCode inválido ou não cadastrado');
     }
+    const pkg = dto.packageCode.trim().toLowerCase();
     const req = await this.getAccessRequest(id);
     if (req.status !== AccessRequestStatus.PENDING) {
       throw new BadRequestException('Solicitação já processada');
@@ -162,7 +176,6 @@ export class AdminAccessService {
     });
     if (!tenant) throw new NotFoundException('Tenant não encontrado');
 
-    const pkg = dto.packageCode as PackageCode;
     tenant.approvalStatus = TenantApprovalStatus.APPROVED;
     tenant.operationalStatus = TenantOperationalStatus.ACTIVE;
     tenant.approvedAt = new Date();
@@ -297,17 +310,18 @@ export class AdminAccessService {
   }
 
   async setPackage(tenantId: string, dto: AdminTenantPackageDto, actorUserId: string) {
-    if (!isValidPackageCode(dto.packageCode)) {
-      throw new BadRequestException('packageCode inválido');
+    if (!(await this.packagePlans.isAssignablePackageCode(dto.packageCode))) {
+      throw new BadRequestException('packageCode inválido ou não cadastrado');
     }
+    const pkg = dto.packageCode.trim().toLowerCase();
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
     if (!tenant) throw new NotFoundException('Tenant não encontrado');
-    tenant.currentPackageCode = dto.packageCode;
+    tenant.currentPackageCode = pkg;
     await this.tenantRepo.save(tenant);
     await this.subRepo.save(
       this.subRepo.create({
         tenantId,
-        packageCode: dto.packageCode,
+        packageCode: pkg,
         status: SubscriptionStatus.ACTIVE,
         startedAt: new Date(),
         endsAt: null,
@@ -321,7 +335,7 @@ export class AdminAccessService {
       action: 'tenant.package_change',
       entityType: 'tenant',
       entityId: tenantId,
-      metadata: { packageCode: dto.packageCode },
+      metadata: { packageCode: pkg },
     });
     return { ok: true };
   }

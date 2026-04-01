@@ -12,7 +12,6 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RequireAuthGuard } from './require-auth.guard';
-import { PACKAGE_CODES } from './package-catalog';
 
 @Controller('auth')
 export class AuthController {
@@ -56,6 +55,6 @@ export class AuthController {
 
   @Get('packages')
   packageCatalog() {
-    return { packages: PACKAGE_CODES };
+    return this.auth.listPublicPackages();
   }
 }

@@ -19,6 +19,12 @@ type TenantRow = {
   operationalStatus: string;
 };
 
+type PackagePlanRow = {
+  code: string;
+  name: string;
+  featureCodes: string[];
+};
+
 type RegistryItem = { code: string; label: string; group: string };
 
 type TenantFeaturesResponse = {
@@ -221,6 +227,16 @@ export default function AdminTenantsPage() {
     enabled: Boolean(user?.isPlatformUser),
   });
 
+  const { data: packagePlans = [] } = useQuery<PackagePlanRow[]>({
+    queryKey: ["admin-packages"],
+    queryFn: async () => {
+      const r = await fetch(`${API_URL}/admin/packages`, { headers: getApiHeaders() });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    },
+    enabled: Boolean(user?.isPlatformUser),
+  });
+
   const setPackage = useMutation({
     mutationFn: async ({
       tenantId,
@@ -294,7 +310,7 @@ export default function AdminTenantsPage() {
                   <td className="p-3 font-mono text-xs text-muted-foreground">{t.slug}</td>
                   <td className="p-3">
                     <select
-                      className="h-9 rounded-lg border border-white/[0.08] bg-background px-2 text-sm max-w-[140px]"
+                      className="h-9 rounded-lg border border-white/[0.08] bg-background px-2 text-sm max-w-[200px]"
                       value={t.currentPackageCode ?? ""}
                       onChange={(e) => {
                         const v = e.target.value;
@@ -306,9 +322,17 @@ export default function AdminTenantsPage() {
                       <option value="" disabled>
                         —
                       </option>
-                      <option value="starter">starter</option>
-                      <option value="growth">growth</option>
-                      <option value="scale">scale</option>
+                      {t.currentPackageCode &&
+                      !packagePlans.some((p) => p.code === t.currentPackageCode) ? (
+                        <option value={t.currentPackageCode}>
+                          {t.currentPackageCode} (não listado)
+                        </option>
+                      ) : null}
+                      {packagePlans.map((p) => (
+                        <option key={p.code} value={p.code}>
+                          {p.name} ({p.code})
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td className="p-3">

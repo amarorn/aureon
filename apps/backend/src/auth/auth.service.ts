@@ -25,8 +25,8 @@ import {
   UserStatus,
 } from './auth.types';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { isValidPackageCode, PACKAGE_CODES } from './package-catalog';
 import { FeaturesService } from './features.service';
+import { PackagePlansService } from './package-plans.service';
 
 export interface JwtPayload {
   sub: string;
@@ -71,6 +71,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly features: FeaturesService,
+    private readonly packagePlans: PackagePlansService,
   ) {}
 
   private domainError(
@@ -88,11 +89,12 @@ export class AuthService {
     if (existing) {
       throw new ConflictException('E-mail já cadastrado');
     }
-    if (!isValidPackageCode(dto.requestedPackageCode)) {
+    const requestedPkg = dto.requestedPackageCode.trim().toLowerCase();
+    if (!(await this.packagePlans.isAssignablePackageCode(requestedPkg))) {
       throw new HttpException(
         {
           statusCode: HttpStatus.BAD_REQUEST,
-          message: `Pacote inválido. Use: ${PACKAGE_CODES.join(', ')}`,
+          message: 'Pacote inválido ou indisponível para cadastro.',
         },
         HttpStatus.BAD_REQUEST,
       );
@@ -134,7 +136,7 @@ export class AuthService {
 
     const req = this.accessRequestRepo.create({
       tenantId: tenant.id,
-      requestedPackageCode: dto.requestedPackageCode,
+      requestedPackageCode: requestedPkg,
       contactName: dto.name,
       contactEmail: dto.email.toLowerCase().trim(),
       contactPhone: dto.phone,
@@ -151,7 +153,7 @@ export class AuthService {
       contactName: dto.name,
       email: dto.email,
       phone: dto.phone,
-      packageCode: dto.requestedPackageCode,
+      packageCode: requestedPkg,
       tenantId: tenant.id,
     });
 
@@ -160,6 +162,13 @@ export class AuthService {
       message:
         'Cadastro recebido. Sua conta será analisada pela equipe Aureon.',
       tenantId: tenant.id,
+    };
+  }
+
+  async listPublicPackages() {
+    const plans = await this.packagePlans.listPlansOrdered();
+    return {
+      packages: plans.map((p) => ({ code: p.code, name: p.name })),
     };
   }
 

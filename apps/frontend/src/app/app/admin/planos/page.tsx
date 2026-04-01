@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Package, Shield } from "lucide-react";
+import { Loader2, Package, Plus, Shield, X } from "lucide-react";
 
 type PackagePlan = {
   code: string;
@@ -19,6 +19,137 @@ type PackagePlan = {
 };
 
 type RegistryItem = { code: string; label: string; group: string };
+
+const PLAN_SLUG = /^[a-z][a-z0-9-]{1,62}$/;
+
+function CreatePlanForm({
+  packages,
+  onClose,
+  onCreated,
+}: {
+  packages: PackagePlan[];
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [copyFrom, setCopyFrom] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const normalized = code.trim().toLowerCase();
+      if (!PLAN_SLUG.test(normalized)) {
+        throw new Error(
+          "Código inválido: minúsculas, números e hífen; 2–64 caracteres, começando com letra.",
+        );
+      }
+      if (!name.trim()) {
+        throw new Error("Informe o nome do plano.");
+      }
+      const base = copyFrom
+        ? (packages.find((p) => p.code === copyFrom)?.featureCodes ?? [])
+        : [];
+      const res = await fetch(`${API_URL}/admin/packages`, {
+        method: "POST",
+        headers: { ...getApiHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: normalized,
+          name: name.trim(),
+          featureCodes: [...base],
+        }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || "Erro ao criar plano");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setFormError(null);
+      setCode("");
+      setName("");
+      setCopyFrom("");
+      onCreated();
+      onClose();
+    },
+    onError: (err: Error) => setFormError(err.message),
+  });
+
+  return (
+    <Card className="border-primary/30 bg-white/[0.02] md:col-span-2 xl:col-span-3">
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <CardTitle className="text-lg font-semibold">Novo plano</CardTitle>
+        <Button type="button" size="icon" variant="ghost" className="size-8" onClick={onClose}>
+          <X className="size-4" />
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Defina um código único (slug) e o nome exibido. Opcionalmente copie as funcionalidades de um
+          plano existente e ajuste depois em &quot;Salvar plano&quot;.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="new-plan-code">Código (slug)</Label>
+            <Input
+              id="new-plan-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+              placeholder="ex.: enterprise"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-plan-name">Nome do plano</Label>
+            <Input
+              id="new-plan-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="ex.: Enterprise"
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="new-plan-copy">Copiar módulos de (opcional)</Label>
+          <select
+            id="new-plan-copy"
+            value={copyFrom}
+            onChange={(e) => setCopyFrom(e.target.value)}
+            className="flex h-10 w-full max-w-md rounded-lg border border-white/[0.08] bg-background px-3 text-sm"
+          >
+            <option value="">Nenhum (plano sem módulos até você editar)</option>
+            {packages.map((p) => (
+              <option key={p.code} value={p.code}>
+                {p.name} ({p.code})
+              </option>
+            ))}
+          </select>
+        </div>
+        {formError ? (
+          <p className="text-sm text-destructive rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2">
+            {formError}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            disabled={create.isPending}
+            onClick={() => {
+              setFormError(null);
+              create.mutate();
+            }}
+          >
+            {create.isPending ? <Loader2 className="size-4 animate-spin" /> : "Criar plano"}
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function PlanCard({
   plan,
@@ -139,6 +270,7 @@ export default function AdminPlanosPage() {
   const { user, isLoading: authLoading } = useAuth();
   const qc = useQueryClient();
   const canEdit = user?.role === "platform_admin";
+  const [showCreate, setShowCreate] = useState(false);
 
   const { data: registry = [], isLoading: regLoading } = useQuery<RegistryItem[]>({
     queryKey: ["admin-feature-registry"],
@@ -184,18 +316,40 @@ export default function AdminPlanosPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Planos e funcionalidades</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Defina quais módulos entram em cada pacote (Starter, Growth, Scale). Alterações valem para
-          novos cálculos de permissão por tenant.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Planos e funcionalidades</h1>
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+            Crie planos personalizados ou edite os existentes. O conjunto de módulos de cada plano
+            entra no cálculo de permissões por tenant (junto com overrides manuais).
+          </p>
+        </div>
+        {canEdit ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="shrink-0 gap-2"
+            onClick={() => setShowCreate((v) => !v)}
+          >
+            <Plus className="size-4" />
+            {showCreate ? "Fechar" : "Novo plano"}
+          </Button>
+        ) : null}
       </div>
 
       {regLoading || pkgLoading ? (
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       ) : (
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          {showCreate && canEdit ? (
+            <CreatePlanForm
+              packages={packages}
+              onClose={() => setShowCreate(false)}
+              onCreated={() => {
+                qc.invalidateQueries({ queryKey: ["admin-packages"] });
+              }}
+            />
+          ) : null}
           {packages.map((p) => (
             <PlanCard
               key={p.code}

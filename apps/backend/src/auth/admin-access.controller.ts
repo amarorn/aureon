@@ -19,6 +19,7 @@ import { RejectAccessRequestDto } from './dto/reject-access-request.dto';
 import { AdminTenantPackageDto } from './dto/admin-tenant-package.dto';
 import { AdminTenantFeaturesDto } from './dto/admin-tenant-features.dto';
 import { AdminUpdatePackageDto } from './dto/admin-update-package.dto';
+import { AdminCreatePackageDto } from './dto/admin-create-package.dto';
 import type { Request } from 'express';
 
 @Controller('admin')
@@ -67,6 +68,16 @@ export class AdminAccessController {
   @Get('packages')
   listPackages() {
     return this.admin.listPackagePlans();
+  }
+
+  @Post('packages')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  createPackage(
+    @Body() dto: AdminCreatePackageDto,
+    @Req() req: Request & { userJwt: { sub: string } },
+  ) {
+    return this.admin.createPackagePlan(dto, req.userJwt.sub);
   }
 
   @Put('packages/:code')

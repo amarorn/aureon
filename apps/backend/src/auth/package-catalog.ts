@@ -44,3 +44,9 @@ export function isValidPackageCode(code: string): code is PackageCode {
 export function featuresForPackage(code: PackageCode): string[] {
   return [...PACKAGE_CATALOG[code]];
 }
+
+const PLAN_SLUG_REGEX = /^[a-z][a-z0-9-]{1,62}$/;
+
+export function isValidPlanSlug(code: string): boolean {
+  return PLAN_SLUG_REGEX.test(code);
+}

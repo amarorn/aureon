@@ -20,12 +20,24 @@ type AccessRequest = {
   tenant?: { id: string; name: string; slug: string };
 };
 
+type PackagePlanRow = { code: string; name: string; featureCodes: string[] };
+
 export default function AdminAccessRequestsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const qc = useQueryClient();
   const [pkg, setPkg] = useState<Record<string, string>>({});
 
-  const { data: requests = [], isLoading } = useQuery<AccessRequest[]>({
+  const { data: packagePlans = [], isLoading: packagesLoading } = useQuery<PackagePlanRow[]>({
+    queryKey: ["admin-packages"],
+    queryFn: async () => {
+      const r = await fetch(`${API_URL}/admin/packages`, { headers: getApiHeaders() });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    },
+    enabled: Boolean(user?.isPlatformUser),
+  });
+
+  const { data: requests = [], isLoading: requestsLoading } = useQuery<AccessRequest[]>({
     queryKey: ["admin-access-requests"],
     queryFn: () =>
       fetch(`${API_URL}/admin/access-requests/pending`, {
@@ -33,6 +45,8 @@ export default function AdminAccessRequestsPage() {
       }).then((r) => (r.ok ? r.json() : [])),
     enabled: Boolean(user?.isPlatformUser),
   });
+
+  const isLoading = requestsLoading || packagesLoading;
 
   const approve = useMutation({
     mutationFn: async ({ id, packageCode }: { id: string; packageCode: string }) => {
@@ -101,11 +115,18 @@ export default function AdminAccessRequestsPage() {
                   <select
                     value={pkg[r.id] ?? r.requestedPackageCode}
                     onChange={(e) => setPkg((p) => ({ ...p, [r.id]: e.target.value }))}
-                    className="h-9 rounded-lg border border-white/[0.08] bg-background px-2 text-sm"
+                    className="h-9 rounded-lg border border-white/[0.08] bg-background px-2 text-sm max-w-[220px]"
                   >
-                    <option value="starter">starter</option>
-                    <option value="growth">growth</option>
-                    <option value="scale">scale</option>
+                    {!packagePlans.some((p) => p.code === r.requestedPackageCode) ? (
+                      <option value={r.requestedPackageCode}>
+                        {r.requestedPackageCode} (solicitado)
+                      </option>
+                    ) : null}
+                    {packagePlans.map((p) => (
+                      <option key={p.code} value={p.code}>
+                        {p.name} ({p.code})
+                      </option>
+                    ))}
                   </select>
                   <Button
                     size="sm"
