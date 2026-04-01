@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +49,7 @@ export default function NewReviewRequestPage() {
   const { data: contacts = [] } = useQuery<Contact[]>({
     queryKey: ["contacts"],
     queryFn: () =>
-      fetch(`${API_URL}/contacts`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/contacts`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -58,7 +58,7 @@ export default function NewReviewRequestPage() {
     mutationFn: async (body: Record<string, string>) => {
       const r = await fetch(`${API_URL}/reputation`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(body),
       });
       const data = await r.json();

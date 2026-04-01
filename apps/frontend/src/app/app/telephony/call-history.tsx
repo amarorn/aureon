@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import Link from "next/link";
 
 interface Call {
@@ -19,7 +19,7 @@ export function CallHistory() {
   const { data: calls = [], isLoading } = useQuery({
     queryKey: ["calls"],
     queryFn: () =>
-      fetch(`${API_URL}/calls`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/calls`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });

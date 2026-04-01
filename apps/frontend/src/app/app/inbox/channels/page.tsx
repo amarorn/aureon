@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 const CHANNEL_TYPES = [
   { value: "whatsapp", label: "WhatsApp" },
@@ -24,7 +24,7 @@ export default function ChannelsPage() {
   const { data: channels = [], isLoading } = useQuery({
     queryKey: ["channels"],
     queryFn: () =>
-      fetch(`${API_URL}/channels`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/channels`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -33,7 +33,7 @@ export default function ChannelsPage() {
     mutationFn: (body: { name: string; type: string }) =>
       fetch(`${API_URL}/channels`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(body),
       }),
     onSuccess: () => {
@@ -46,7 +46,7 @@ export default function ChannelsPage() {
     mutationFn: (id: string) =>
       fetch(`${API_URL}/channels/${id}`, {
         method: "DELETE",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channels"] });

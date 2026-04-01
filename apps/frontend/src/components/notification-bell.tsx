@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bell, CheckCircle2, UserPlus, ArrowUpRight, X, CheckCheck, Mail } from "lucide-react";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 interface Notification {
   id: string;
@@ -74,7 +74,7 @@ export function NotificationBell() {
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["notifications"],
     queryFn: () =>
-      fetch(`${API_URL}/notifications`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/notifications`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : [],
       ),
     refetchInterval: 45_000,
@@ -84,7 +84,7 @@ export function NotificationBell() {
     mutationFn: () =>
       fetch(`${API_URL}/notifications/all/read`, {
         method: "PATCH",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
@@ -93,7 +93,7 @@ export function NotificationBell() {
     mutationFn: (id: string) =>
       fetch(`${API_URL}/notifications/${id}`, {
         method: "DELETE",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });

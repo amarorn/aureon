@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 export default function TemplatesPage() {
   const queryClient = useQueryClient();
@@ -18,7 +18,7 @@ export default function TemplatesPage() {
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["message-templates"],
     queryFn: () =>
-      fetch(`${API_URL}/message-templates`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/message-templates`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -27,7 +27,7 @@ export default function TemplatesPage() {
     mutationFn: (body: { name: string; content: string; variables?: string[] }) =>
       fetch(`${API_URL}/message-templates`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(body),
       }),
     onSuccess: () => {
@@ -42,7 +42,7 @@ export default function TemplatesPage() {
     mutationFn: (id: string) =>
       fetch(`${API_URL}/message-templates/${id}`, {
         method: "DELETE",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["message-templates"] });

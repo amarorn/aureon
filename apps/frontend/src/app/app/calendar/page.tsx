@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -114,7 +114,7 @@ export default function CalendarPage() {
     queryKey: ["google-calendar-status"],
     queryFn: () =>
       fetch(`${API_URL}/appointments/google-calendar/status`, {
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : { connected: false })),
     staleTime: 60_000,
   });
@@ -123,7 +123,7 @@ export default function CalendarPage() {
     queryKey: ["outlook-calendar-status"],
     queryFn: () =>
       fetch(`${API_URL}/appointments/outlook-calendar/status`, {
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : { connected: false })),
     staleTime: 60_000,
   });
@@ -132,7 +132,7 @@ export default function CalendarPage() {
     mutationFn: () =>
       fetch(`${API_URL}/appointments/google-calendar/sync`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => r.json()),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
   });
@@ -141,7 +141,7 @@ export default function CalendarPage() {
     mutationFn: () =>
       fetch(`${API_URL}/appointments/google-calendar/import`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => r.json()),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
   });
@@ -150,7 +150,7 @@ export default function CalendarPage() {
     mutationFn: () =>
       fetch(`${API_URL}/appointments/outlook-calendar/sync`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => r.json()),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
   });
@@ -159,7 +159,7 @@ export default function CalendarPage() {
     mutationFn: () =>
       fetch(`${API_URL}/appointments/outlook-calendar/import`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => r.json()),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
   });
@@ -172,7 +172,7 @@ export default function CalendarPage() {
     queryKey: ["appointments", currentYear, currentMonth],
     queryFn: () =>
       fetch(`${API_URL}/appointments?startDate=${startDate}&endDate=${endDate}`, {
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : [])),
   });
 
@@ -180,7 +180,7 @@ export default function CalendarPage() {
     mutationFn: (id: string) =>
       fetch(`${API_URL}/appointments/${id}`, {
         method: "DELETE",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),
   });
@@ -189,7 +189,7 @@ export default function CalendarPage() {
     mutationFn: (id: string) =>
       fetch(`${API_URL}/appointments/${id}`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ status: "completed" }),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["appointments"] }),

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Plus,
@@ -73,7 +73,7 @@ export default function EmailMarketingPage() {
   const { data: campaigns = [], isLoading } = useQuery<Campaign[]>({
     queryKey: ["email-campaigns"],
     queryFn: () =>
-      fetch(`${API_URL}/email-campaigns`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/email-campaigns`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -82,7 +82,7 @@ export default function EmailMarketingPage() {
     mutationFn: async (id: string) => {
       const response = await fetch(`${API_URL}/email-campaigns/${id}/send`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
@@ -109,13 +109,13 @@ export default function EmailMarketingPage() {
 
   const duplicateMutation = useMutation({
     mutationFn: (id: string) =>
-      fetch(`${API_URL}/email-campaigns/${id}/duplicate`, { method: "POST", headers: apiHeaders }),
+      fetch(`${API_URL}/email-campaigns/${id}/duplicate`, { method: "POST", headers: getApiHeaders() }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-campaigns"] }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      fetch(`${API_URL}/email-campaigns/${id}`, { method: "DELETE", headers: apiHeaders }),
+      fetch(`${API_URL}/email-campaigns/${id}`, { method: "DELETE", headers: getApiHeaders() }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-campaigns"] }),
   });
 

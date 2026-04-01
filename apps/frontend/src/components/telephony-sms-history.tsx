@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 interface SmsMessage {
   id: string;
@@ -30,7 +30,7 @@ export function TelephonySmsHistory({
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["telephony-sms", contactId ?? "all"],
     queryFn: () =>
-      fetch(`${API_URL}/telephony/sms${suffix}`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/telephony/sms${suffix}`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });

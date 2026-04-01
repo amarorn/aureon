@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, Send, CheckCircle2, XCircle, Copy,
@@ -102,7 +102,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
   const { data: proposal, isLoading } = useQuery<Proposal>({
     queryKey: ["proposal", id],
     queryFn: () =>
-      fetch(`${API_URL}/proposals/${id}`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/proposals/${id}`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null
       ),
   });
@@ -112,7 +112,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
       readApiError(
         await fetch(`${API_URL}/proposals/${id}/status`, {
           method: "PUT",
-          headers: apiHeaders,
+          headers: getApiHeaders(),
           body: JSON.stringify({ status }),
         }),
         "Erro ao atualizar a proposta",
@@ -133,7 +133,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
   const duplicateMutation = useMutation({
     mutationFn: async () =>
       readApiError(
-        await fetch(`${API_URL}/proposals/${id}/duplicate`, { method: "POST", headers: apiHeaders }),
+        await fetch(`${API_URL}/proposals/${id}/duplicate`, { method: "POST", headers: getApiHeaders() }),
         "Erro ao duplicar a proposta",
       ),
     onMutate: () => {
@@ -152,7 +152,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
   const deleteMutation = useMutation({
     mutationFn: async () =>
       readApiError(
-        await fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: apiHeaders }),
+        await fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: getApiHeaders() }),
         "Erro ao excluir a proposta",
       ),
     onMutate: () => {
@@ -173,7 +173,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
       readApiError(
         await fetch(`${API_URL}/proposals/${id}/signature/send`, {
           method: "POST",
-          headers: apiHeaders,
+          headers: getApiHeaders(),
           body: JSON.stringify({}),
         }),
         "Erro ao enviar para assinatura",
@@ -199,7 +199,7 @@ export default function ProposalDetailPage({ params }: { params: Promise<{ id: s
       readApiError(
         await fetch(`${API_URL}/proposals/${id}/signature/refresh`, {
           method: "POST",
-          headers: apiHeaders,
+          headers: getApiHeaders(),
         }),
         "Erro ao atualizar assinatura",
       ) as Promise<Proposal>,

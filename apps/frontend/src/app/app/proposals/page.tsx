@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Plus, FileCheck, Send, CheckCircle2, XCircle,
@@ -83,7 +83,7 @@ export default function ProposalsPage() {
   const { data: stats } = useQuery<Stats>({
     queryKey: ["proposals-stats"],
     queryFn: () =>
-      fetch(`${API_URL}/proposals/stats`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/proposals/stats`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null
       ),
   });
@@ -91,7 +91,7 @@ export default function ProposalsPage() {
   const { data: proposals = [], isLoading, dataUpdatedAt } = useQuery<Proposal[]>({
     queryKey: ["proposals"],
     queryFn: () =>
-      fetch(`${API_URL}/proposals`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/proposals`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -101,7 +101,7 @@ export default function ProposalsPage() {
       readApiError(
         await fetch(`${API_URL}/proposals/${id}/status`, {
           method: "PUT",
-          headers: apiHeaders,
+          headers: getApiHeaders(),
           body: JSON.stringify({ status }),
         }),
         "Erro ao atualizar a proposta",
@@ -123,7 +123,7 @@ export default function ProposalsPage() {
       readApiError(
         await fetch(`${API_URL}/proposals/${id}/duplicate`, {
           method: "POST",
-          headers: apiHeaders,
+          headers: getApiHeaders(),
         }),
         "Erro ao duplicar a proposta",
       ),
@@ -142,7 +142,7 @@ export default function ProposalsPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) =>
       readApiError(
-        await fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: apiHeaders }),
+        await fetch(`${API_URL}/proposals/${id}`, { method: "DELETE", headers: getApiHeaders() }),
         "Erro ao excluir a proposta",
       ),
     onMutate: () => {

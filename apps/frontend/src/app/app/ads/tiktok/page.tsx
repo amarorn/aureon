@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import * as echarts from "echarts";
 import Link from "next/link";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   TrendingUp,
@@ -73,7 +73,7 @@ export default function TikTokAdsPage() {
   const { data: status, isLoading: statusLoading } = useQuery<TikTokStatus>({
     queryKey: ["tiktok-status"],
     queryFn: () =>
-      fetch(`${API_URL}/ads/tiktok/status`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/ads/tiktok/status`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : { connected: false, advertiserId: null, availableAdvertiserIds: [] },
       ),
   });
@@ -81,7 +81,7 @@ export default function TikTokAdsPage() {
   const { data: overview, isLoading: overviewLoading, refetch } = useQuery<TikTokOverview>({
     queryKey: ["tiktok-overview", days],
     queryFn: () =>
-      fetch(`${API_URL}/ads/tiktok/overview?days=${days}`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/ads/tiktok/overview?days=${days}`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null,
       ),
     enabled: status?.connected === true,
@@ -91,7 +91,7 @@ export default function TikTokAdsPage() {
     mutationFn: (advertiserId: string) =>
       fetch(`${API_URL}/ads/tiktok/config`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ advertiserId }),
       }).then((r) => r.json()),
     onSuccess: () => {

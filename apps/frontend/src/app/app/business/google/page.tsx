@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Building2,
@@ -22,7 +22,7 @@ export default function GoogleBusinessProfilePage() {
   const { data: status, isLoading } = useQuery<GbpStatus>({
     queryKey: ["gbp-status"],
     queryFn: () =>
-      fetch(`${API_URL}/business/google/status`, { headers: apiHeaders }).then(
+      fetch(`${API_URL}/business/google/status`, { headers: getApiHeaders() }).then(
         (r) =>
           r.ok
             ? r.json()

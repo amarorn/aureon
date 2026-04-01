@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import {
   CreditCard,
   X,
@@ -88,7 +88,7 @@ function CreatePaymentModal({
     mutationFn: () =>
       fetch(`${API_URL}/payments`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({
           provider,
           opportunityId,
@@ -345,7 +345,7 @@ export default function OpportunityDetailPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["opportunity", id],
     queryFn: () =>
-      fetch(`${API_URL}/opportunities/${id}`, { headers: apiHeaders }).then(
+      fetch(`${API_URL}/opportunities/${id}`, { headers: getApiHeaders() }).then(
         (r) => (r.ok ? r.json() : null)
       ),
   });
@@ -353,7 +353,7 @@ export default function OpportunityDetailPage() {
   const { data: providerStatus } = useQuery({
     queryKey: ["payments-providers"],
     queryFn: () =>
-      fetch(`${API_URL}/payments/providers`, { headers: apiHeaders })
+      fetch(`${API_URL}/payments/providers`, { headers: getApiHeaders() })
         .then((r) => (r.ok ? r.json() : { asaas: false, mercadopago: false, stripe: false })),
     staleTime: 60_000,
   });
@@ -361,7 +361,7 @@ export default function OpportunityDetailPage() {
   const { data: payments = [] } = useQuery({
     queryKey: ["payments", id],
     queryFn: () =>
-      fetch(`${API_URL}/payments?opportunityId=${id}`, { headers: apiHeaders })
+      fetch(`${API_URL}/payments?opportunityId=${id}`, { headers: getApiHeaders() })
         .then((r) => (r.ok ? r.json() : [])),
     enabled: !!id,
   });

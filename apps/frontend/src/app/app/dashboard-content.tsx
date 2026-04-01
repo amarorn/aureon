@@ -5,7 +5,7 @@ import { useTheme } from "next-themes";
 import { useQuery } from "@tanstack/react-query";
 import * as echarts from "echarts";
 import { Label } from "@/components/ui/label";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { MOCK_METRICS } from "@/lib/mock-data";
 import {
   TrendingUp,
@@ -176,14 +176,14 @@ export function DashboardContent() {
     queryKey: ["dashboard", "metrics", startDate, endDate, pipelineId],
     queryFn: () =>
       fetch(`${API_URL}/dashboard/metrics?${params}`, {
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : null)),
   });
 
   const { data: pipelines = [] } = useQuery({
     queryKey: ["pipelines"],
     queryFn: () =>
-      fetch(`${API_URL}/pipelines`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/pipelines`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });

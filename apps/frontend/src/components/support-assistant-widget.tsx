@@ -16,7 +16,7 @@ import {
   Send,
   User,
 } from "lucide-react";
-import { API_URL, TENANT_ID, apiHeaders } from "@/lib/api";
+import { API_URL, TENANT_ID, getApiHeaders } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/assistant/types";
 import { resolveSupportRouteContext } from "@/lib/support/route-context";
@@ -208,7 +208,7 @@ export function SupportAssistantWidget() {
 
     const [tenantsResult, integrationsResult] = await Promise.allSettled([
       fetch(`${API_URL}/tenants`),
-      fetch(`${API_URL}/integrations`, { headers: apiHeaders }),
+      fetch(`${API_URL}/integrations`, { headers: getApiHeaders() }),
     ]);
 
     if (

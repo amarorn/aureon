@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { MOCK_CONTACTS, type MockContact } from "@/lib/mock-data";
 import {
   Search,
@@ -229,7 +229,7 @@ export function ContactsList() {
   const { data, isLoading } = useQuery({
     queryKey: ["contacts"],
     queryFn: () =>
-      fetch(`${API_URL}/contacts`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/contacts`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null
       ),
   });

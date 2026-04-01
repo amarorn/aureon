@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import * as echarts from "echarts";
 import Link from "next/link";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { GaWorldMap } from "@/components/ga-world-map";
 import {
@@ -130,7 +130,7 @@ export default function GoogleAnalyticsPage() {
   const { data: status, isLoading: statusLoading } = useQuery<GaStatus>({
     queryKey: ["ga-status"],
     queryFn: () =>
-      fetch(`${API_URL}/analytics/google/status`, { headers: apiHeaders }).then(
+      fetch(`${API_URL}/analytics/google/status`, { headers: getApiHeaders() }).then(
         (r) => (r.ok ? r.json() : { connected: false, propertyId: null }),
       ),
   });
@@ -140,7 +140,7 @@ export default function GoogleAnalyticsPage() {
       queryKey: ["ga-account-summaries"],
       queryFn: () =>
         fetch(`${API_URL}/analytics/google/account-summaries`, {
-          headers: apiHeaders,
+          headers: getApiHeaders(),
         }).then((r) => r.json()),
       enabled: Boolean(status?.connected),
     });
@@ -150,7 +150,7 @@ export default function GoogleAnalyticsPage() {
     queryFn: () =>
       fetch(
         `${API_URL}/analytics/google/overview?days=${reportDays}`,
-        { headers: apiHeaders },
+        { headers: getApiHeaders() },
       ).then((r) => r.json()),
     enabled: Boolean(status?.connected && status?.propertyId),
   });
@@ -159,7 +159,7 @@ export default function GoogleAnalyticsPage() {
     mutationFn: (propertyId: string) =>
       fetch(`${API_URL}/analytics/google/config`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ propertyId }),
       }).then((r) => r.json()),
     onSuccess: () => {

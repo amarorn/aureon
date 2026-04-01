@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 export function AddToQueueButton({ contactId }: { contactId: string }) {
   const queryClient = useQueryClient();
@@ -10,7 +10,7 @@ export function AddToQueueButton({ contactId }: { contactId: string }) {
     mutationFn: () =>
       fetch(`${API_URL}/call-queue`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ contactId }),
       }),
     onSuccess: () => {

@@ -21,10 +21,12 @@ import { AdsModule } from './ads/ads.module';
 import { BusinessModule } from './business/business.module';
 import { EmailInboxModule } from './email-inbox/email-inbox.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     EventsModule,
+    AuthModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [

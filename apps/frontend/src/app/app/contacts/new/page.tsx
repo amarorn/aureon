@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { consumeSupportPrefillDraft } from "@/lib/support/ui-actions";
 
 export default function NewContactPage() {
@@ -39,7 +39,7 @@ export default function NewContactPage() {
     try {
       const res = await fetch(`${API_URL}/contacts`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(form),
       });
       if (res.ok) {

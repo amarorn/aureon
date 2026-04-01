@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { TelephonySmsHistory } from "@/components/telephony-sms-history";
 import { TasksSection } from "./tasks-section";
 import { CallsSection } from "./calls-section";
@@ -40,7 +40,7 @@ function WhatsAppModal({
     mutationFn: () =>
       fetch(`${API_URL}/integrations/whatsapp/messages`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ to: phone, text }),
       }).then((r) => r.json()),
     onSuccess: (data) => {
@@ -147,7 +147,7 @@ function TwilioCallModal({
     mutationFn: () =>
       fetch(`${API_URL}/calls/initiate`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({
           contactId,
           to: phone,
@@ -230,7 +230,7 @@ export default function ContactDetailPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["contact", id],
     queryFn: () =>
-      fetch(`${API_URL}/contacts/${id}`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/contacts/${id}`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null
       ),
   });
@@ -238,7 +238,7 @@ export default function ContactDetailPage() {
   const { data: waStatus } = useQuery({
     queryKey: ["whatsapp-status"],
     queryFn: () =>
-      fetch(`${API_URL}/integrations/whatsapp/status`, { headers: apiHeaders })
+      fetch(`${API_URL}/integrations/whatsapp/status`, { headers: getApiHeaders() })
         .then((r) => (r.ok ? r.json() : { connected: false })),
     staleTime: 60_000,
   });
@@ -246,7 +246,7 @@ export default function ContactDetailPage() {
   const { data: twilioStatus } = useQuery({
     queryKey: ["twilio-status"],
     queryFn: () =>
-      fetch(`${API_URL}/integrations/twilio/status`, { headers: apiHeaders })
+      fetch(`${API_URL}/integrations/twilio/status`, { headers: getApiHeaders() })
         .then((r) => (r.ok ? r.json() : { connected: false })),
     staleTime: 60_000,
   });
@@ -254,7 +254,7 @@ export default function ContactDetailPage() {
   const { data: bookingLink } = useQuery({
     queryKey: ["booking-link", id],
     queryFn: () =>
-      fetch(`${API_URL}/integrations/booking/link?contactId=${id}`, { headers: apiHeaders })
+      fetch(`${API_URL}/integrations/booking/link?contactId=${id}`, { headers: getApiHeaders() })
         .then((r) => (r.ok ? r.json() : { url: null })),
     staleTime: 60_000,
   });

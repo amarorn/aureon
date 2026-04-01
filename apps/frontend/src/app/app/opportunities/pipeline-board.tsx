@@ -20,7 +20,7 @@ const stageOnlyCollision: CollisionDetection = (args) => {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useState } from "react";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { DroppableStage } from "./droppable-stage";
 import { LayoutGrid, List, ExternalLink } from "lucide-react";
 
@@ -49,7 +49,7 @@ interface Opportunity {
 }
 
 async function fetchPipelines(): Promise<Pipeline[]> {
-  const res = await fetch(`${API_URL}/pipelines`, { headers: apiHeaders });
+  const res = await fetch(`${API_URL}/pipelines`, { headers: getApiHeaders() });
   if (!res.ok) {
     throw new Error("Erro ao carregar pipelines.");
   }
@@ -59,7 +59,7 @@ async function fetchPipelines(): Promise<Pipeline[]> {
 
 async function fetchOpportunities(pipelineId: string): Promise<Opportunity[]> {
   const res = await fetch(`${API_URL}/opportunities?pipelineId=${pipelineId}`, {
-    headers: apiHeaders,
+    headers: getApiHeaders(),
   });
   if (!res.ok) {
     throw new Error("Erro ao carregar oportunidades.");
@@ -109,7 +109,7 @@ export function PipelineBoard() {
     }) => {
       const res = await fetch(`${API_URL}/opportunities/${oppId}/stage`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ stageId }),
       });
       if (!res.ok) {

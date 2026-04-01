@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import {
   Search,
   MessageCircle,
@@ -90,7 +90,7 @@ export function InboxList() {
     queryKey: ["conversations", statusFilter],
     queryFn: () =>
       fetch(`${API_URL}/conversations?status=${statusFilter}`, {
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : [])),
   });
 

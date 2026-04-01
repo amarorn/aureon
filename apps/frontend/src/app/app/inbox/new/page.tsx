@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 type ContactOption = {
   id: string;
@@ -44,7 +44,7 @@ function NewConversationForm() {
   const { data: contacts = [] } = useQuery({
     queryKey: ["contacts"],
     queryFn: () =>
-      fetch(`${API_URL}/contacts`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/contacts`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -52,7 +52,7 @@ function NewConversationForm() {
   const { data: channels = [] } = useQuery({
     queryKey: ["channels"],
     queryFn: () =>
-      fetch(`${API_URL}/channels`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/channels`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -77,7 +77,7 @@ function NewConversationForm() {
     }) => {
       const res = await fetch(`${API_URL}/conversations`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("Erro ao criar conversa");

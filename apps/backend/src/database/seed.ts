@@ -4,7 +4,9 @@ config({ path: resolve(process.cwd(), '.env') });
 config({ path: resolve(process.cwd(), '../.env') });
 
 import { DataSource } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 import { Tenant } from '../tenant/tenant.entity';
+import { User } from '../auth/entities/user.entity';
 import {
   Pipeline,
   Stage,
@@ -14,6 +16,7 @@ import {
   Interaction,
   Task,
 } from '../crm/entities';
+import { UserRole, UserStatus } from '../auth/auth.types';
 
 async function seed() {
   const ds = new DataSource({
@@ -23,7 +26,17 @@ async function seed() {
     username: process.env.DB_USER || 'aureon',
     password: process.env.DB_PASSWORD || 'aureon',
     database: process.env.DB_NAME || 'aureon',
-    entities: [Tenant, Pipeline, Stage, Contact, Tag, Opportunity, Interaction, Task],
+    entities: [
+      Tenant,
+      User,
+      Pipeline,
+      Stage,
+      Contact,
+      Tag,
+      Opportunity,
+      Interaction,
+      Task,
+    ],
     synchronize: false,
   });
 
@@ -36,6 +49,10 @@ async function seed() {
       slug: 'default',
       name: 'Tenant Padrão',
       active: true,
+      type: 'customer',
+      approvalStatus: 'approved',
+      operationalStatus: 'active',
+      currentPackageCode: 'scale',
     });
     await tenantRepo.save(tenant);
     console.log('Tenant criado:', tenant.id);
@@ -69,6 +86,44 @@ async function seed() {
   }
 
   console.log('DEFAULT_TENANT_ID para .env:', tenant.id);
+
+  const adminEmail = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.PLATFORM_ADMIN_PASSWORD;
+  if (adminEmail && adminPassword) {
+    const userRepo = ds.getRepository(User);
+    const existingAdmin = await userRepo.findOne({
+      where: { email: adminEmail },
+    });
+    if (!existingAdmin) {
+      let internal = await tenantRepo.findOne({ where: { slug: 'aureon-internal' } });
+      if (!internal) {
+        internal = tenantRepo.create({
+          slug: 'aureon-internal',
+          name: 'Aureon',
+          active: true,
+          type: 'internal',
+          approvalStatus: 'approved',
+          operationalStatus: 'active',
+          currentPackageCode: 'scale',
+        });
+        await tenantRepo.save(internal);
+        console.log('Tenant interno Aureon:', internal.id);
+      }
+      const passwordHash = await bcrypt.hash(adminPassword, 12);
+      const admin = userRepo.create({
+        tenantId: null,
+        email: adminEmail,
+        passwordHash,
+        name: 'Administrador Aureon',
+        role: UserRole.PLATFORM_ADMIN,
+        status: UserStatus.ACTIVE,
+        isPlatformUser: true,
+      });
+      await userRepo.save(admin);
+      console.log('Usuário platform_admin criado:', adminEmail);
+    }
+  }
+
   await ds.destroy();
 }
 

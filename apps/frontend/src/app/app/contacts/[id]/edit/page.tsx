@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 export default function EditContactPage() {
   const params = useParams();
@@ -18,7 +18,7 @@ export default function EditContactPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["contact", id],
     queryFn: () =>
-      fetch(`${API_URL}/contacts/${id}`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/contacts/${id}`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null
       ),
   });
@@ -52,7 +52,7 @@ export default function EditContactPage() {
     try {
       const res = await fetch(`${API_URL}/contacts/${id}`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(form),
       });
       if (res.ok) router.push(`/app/contacts/${id}`);

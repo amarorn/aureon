@@ -14,7 +14,7 @@ import {
   RefreshCw,
   Instagram,
 } from "lucide-react";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { PageTour } from "@/components/page-tour";
 
@@ -31,7 +31,7 @@ export default function InboxPage() {
     try {
       const res = await fetch(`${API_URL}/email-inbox/sync`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -51,7 +51,7 @@ export default function InboxPage() {
     try {
       const res = await fetch(`${API_URL}/email-inbox/sync`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
       const data = await res.json();
       const parts: string[] = [];
@@ -76,7 +76,7 @@ export default function InboxPage() {
     try {
       const res = await fetch(`${API_URL}/integrations/instagram/sync`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
       const data = await res.json();
       setSyncMsg({

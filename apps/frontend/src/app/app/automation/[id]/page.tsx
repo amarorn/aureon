@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 const TRIGGERS = [
   { value: "contact_created", label: "Contato criado" },
@@ -41,7 +41,7 @@ export default function EditWorkflowPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["workflow", id],
     queryFn: () =>
-      fetch(`${API_URL}/workflows/${id}`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/workflows/${id}`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null
       ),
   });
@@ -59,7 +59,7 @@ export default function EditWorkflowPage() {
   }, [data]);
 
   useEffect(() => {
-    fetch(`${API_URL}/pipelines`, { headers: apiHeaders })
+    fetch(`${API_URL}/pipelines`, { headers: getApiHeaders() })
       .then((r) => r.json())
       .then((d) => setPipelines(Array.isArray(d) ? d : []));
   }, []);
@@ -73,7 +73,7 @@ export default function EditWorkflowPage() {
     try {
       const res = await fetch(`${API_URL}/workflows/${id}`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(form),
       });
       if (res.ok) {

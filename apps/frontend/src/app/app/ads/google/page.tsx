@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Megaphone,
@@ -28,7 +28,7 @@ export default function GoogleAdsPage() {
   const { data: status, isLoading } = useQuery<AdsStatus>({
     queryKey: ["google-ads-status"],
     queryFn: () =>
-      fetch(`${API_URL}/ads/google/status`, { headers: apiHeaders }).then(
+      fetch(`${API_URL}/ads/google/status`, { headers: getApiHeaders() }).then(
         (r) =>
           r.ok
             ? r.json()
@@ -46,7 +46,7 @@ export default function GoogleAdsPage() {
     mutationFn: (customerId: string) =>
       fetch(`${API_URL}/ads/google/config`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ customerId }),
       }).then((r) => r.json()),
     onSuccess: () => {

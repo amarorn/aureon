@@ -36,9 +36,21 @@ import { ProposalItem } from '../proposals/entities/proposal-item.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { SmsMessage } from '../telephony/entities/sms-message.entity';
 import { Notification } from '../notifications/entities/notification.entity';
+import { User } from '../auth/entities/user.entity';
+import { AuthSession } from '../auth/entities/auth-session.entity';
+import { TenantSubscription } from '../auth/entities/tenant-subscription.entity';
+import { TenantFeatureFlag } from '../auth/entities/tenant-feature-flag.entity';
+import { TenantAccessRequest } from '../auth/entities/tenant-access-request.entity';
+import { AuditLog } from '../auth/entities/audit-log.entity';
 
 const entities = [
   Tenant,
+  User,
+  AuthSession,
+  TenantSubscription,
+  TenantFeatureFlag,
+  TenantAccessRequest,
+  AuditLog,
   Contact,
   Tag,
   Pipeline,

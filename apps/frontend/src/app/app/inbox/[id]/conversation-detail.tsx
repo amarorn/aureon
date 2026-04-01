@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Mail, RefreshCw } from "lucide-react";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 const CHANNEL_LABELS: Record<string, string> = {
   whatsapp: "WhatsApp",
@@ -48,14 +48,14 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     queryKey: ["conversation", conversationId],
     queryFn: () =>
       fetch(`${API_URL}/conversations/${conversationId}`, {
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : null)),
   });
 
   const { data: templates = [] } = useQuery({
     queryKey: ["message-templates"],
     queryFn: () =>
-      fetch(`${API_URL}/message-templates`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/message-templates`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -72,7 +72,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     }) => {
       const res = await fetch(`${API_URL}/conversations/${conversationId}/messages`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -111,7 +111,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     mutationFn: (assignedTo: string | null) =>
       fetch(`${API_URL}/conversations/${conversationId}/assign`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ assignedTo }),
       }),
     onSuccess: invalidateConversation,
@@ -121,7 +121,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     mutationFn: () =>
       fetch(`${API_URL}/conversations/${conversationId}/close`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: invalidateConversation,
   });
@@ -130,7 +130,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     mutationFn: () =>
       fetch(`${API_URL}/conversations/${conversationId}/reopen`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: invalidateConversation,
   });
@@ -139,7 +139,7 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     mutationFn: (title: string) =>
       fetch(`${API_URL}/conversations/${conversationId}/create-task`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ title }),
       }),
     onSuccess: () => {
@@ -153,13 +153,42 @@ export function ConversationDetail({ conversationId }: { conversationId: string 
     mutationFn: (title: string) =>
       fetch(`${API_URL}/conversations/${conversationId}/create-opportunity`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ title }),
       }),
     onSuccess: () => {
       invalidateConversation();
       setShowCreateOpp(false);
       setOppTitle("");
+    },
+  });
+
+  const emailSendMutation = useMutation({
+    mutationFn: (body: { to: string; subject: string; body: string; cc?: string; provider?: string }) =>
+      fetch(`${API_URL}/email-inbox/send`, {
+        method: "POST",
+        headers: getApiHeaders(),
+        body: JSON.stringify(body),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      setEmailBody("");
+    },
+  });
+
+  const igSendMutation = useMutation({
+    mutationFn: (text: string) =>
+      fetch(`${API_URL}/integrations/instagram/send`, {
+        method: "POST",
+        headers: getApiHeaders(),
+        body: JSON.stringify({
+          recipientIgsid: conversation?.externalId ?? "",
+          text,
+        }),
+      }).then((r) => r.json()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
+      setMessageContent("");
     },
   });
 

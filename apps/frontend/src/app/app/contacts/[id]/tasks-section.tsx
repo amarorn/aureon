@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { useState } from "react";
 import { CheckCheck, ClipboardList, Plus, Trash2, Loader2 } from "lucide-react";
 
@@ -20,7 +20,7 @@ export function TasksSection({ contactId }: { contactId: string }) {
     queryKey: ["tasks", contactId],
     queryFn: () =>
       fetch(`${API_URL}/tasks?contactId=${contactId}`, {
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : [])),
   });
 
@@ -28,7 +28,7 @@ export function TasksSection({ contactId }: { contactId: string }) {
     mutationFn: (title: string) =>
       fetch(`${API_URL}/tasks`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ contactId, title }),
       }),
     onSuccess: () => {
@@ -41,7 +41,7 @@ export function TasksSection({ contactId }: { contactId: string }) {
     mutationFn: (taskId: string) =>
       fetch(`${API_URL}/tasks/${taskId}/toggle`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", contactId] });
@@ -52,7 +52,7 @@ export function TasksSection({ contactId }: { contactId: string }) {
     mutationFn: (taskId: string) =>
       fetch(`${API_URL}/tasks/${taskId}`, {
         method: "DELETE",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", contactId] });
@@ -63,7 +63,7 @@ export function TasksSection({ contactId }: { contactId: string }) {
     mutationFn: () =>
       fetch(`${API_URL}/tasks/bulk/automatic`, {
         method: "DELETE",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : { deleted: 0 })),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -78,7 +78,7 @@ export function TasksSection({ contactId }: { contactId: string }) {
         pending.map((t) =>
           fetch(`${API_URL}/tasks/${t.id}/toggle`, {
             method: "PUT",
-            headers: apiHeaders,
+            headers: getApiHeaders(),
           })
         )
       );

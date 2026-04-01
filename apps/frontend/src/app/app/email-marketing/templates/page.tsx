@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,7 @@ export default function EmailTemplatesPage() {
   const { data: templates = [], isLoading } = useQuery<EmailTemplate[]>({
     queryKey: ["email-templates"],
     queryFn: () =>
-      fetch(`${API_URL}/email-templates`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/email-templates`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -40,7 +40,7 @@ export default function EmailTemplatesPage() {
     mutationFn: async (body: Record<string, unknown>) => {
       const r = await fetch(`${API_URL}/email-templates`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(body),
       });
       const data = await r.json();
@@ -59,7 +59,7 @@ export default function EmailTemplatesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      fetch(`${API_URL}/email-templates/${id}`, { method: "DELETE", headers: apiHeaders }),
+      fetch(`${API_URL}/email-templates/${id}`, { method: "DELETE", headers: getApiHeaders() }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["email-templates"] }),
   });
 

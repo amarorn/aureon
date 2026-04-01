@@ -7,7 +7,7 @@ import { AlertCircle, CheckCircle2, Loader2, Phone } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 interface QueueItem {
   id: string;
@@ -41,7 +41,7 @@ export function PowerDialer() {
   const { data: twilioStatus } = useQuery({
     queryKey: ["twilio-status"],
     queryFn: () =>
-      fetch(`${API_URL}/integrations/twilio/status`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/integrations/twilio/status`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : { connected: false }
       ),
     staleTime: 60_000,
@@ -50,7 +50,7 @@ export function PowerDialer() {
   const { data: queue = [], isLoading } = useQuery({
     queryKey: ["call-queue"],
     queryFn: () =>
-      fetch(`${API_URL}/call-queue`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/call-queue`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
@@ -58,7 +58,7 @@ export function PowerDialer() {
   const { data: nextItem } = useQuery({
     queryKey: ["call-queue", "next"],
     queryFn: () =>
-      fetch(`${API_URL}/call-queue/next`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/call-queue/next`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null
       ),
   });
@@ -80,7 +80,7 @@ export function PowerDialer() {
     }) => {
       const dialResponse = await fetch(`${API_URL}/calls/initiate`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({
           contactId,
           to: phone,
@@ -104,7 +104,7 @@ export function PowerDialer() {
 
       const queueResponse = await fetch(`${API_URL}/call-queue/${queueId}/calling`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
 
       return {
@@ -135,7 +135,7 @@ export function PowerDialer() {
     mutationFn: async (queueId: string) => {
       const res = await fetch(`${API_URL}/call-queue/${queueId}/skipped`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
       if (!res.ok) throw new Error("Nao foi possivel pular o contato.");
     },
@@ -149,7 +149,7 @@ export function PowerDialer() {
     mutationFn: async (queueId: string) => {
       const res = await fetch(`${API_URL}/call-queue/${queueId}`, {
         method: "DELETE",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
       if (!res.ok) throw new Error("Nao foi possivel remover da fila.");
     },
@@ -163,7 +163,7 @@ export function PowerDialer() {
     mutationFn: async () => {
       const res = await fetch(`${API_URL}/call-queue/clear`, {
         method: "DELETE",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
       if (!res.ok) throw new Error("Nao foi possivel limpar a fila.");
     },

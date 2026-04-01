@@ -74,7 +74,11 @@ export class BookingService {
 
     const existing = await this.integrationService.findByProvider(tenantId, integrationProvider);
     if (existing) {
-      await this.integrationService.updateConfig(tenantId, integrationProvider, config as unknown as Record<string, unknown>);
+      await this.integrationService.updateConfig(
+        tenantId,
+        integrationProvider,
+        config as unknown as Record<string, unknown>,
+      );
       await this.integrationService.setStatus(tenantId, existing.id, 'connected');
     } else {
       await this.integrationService.create(tenantId, {

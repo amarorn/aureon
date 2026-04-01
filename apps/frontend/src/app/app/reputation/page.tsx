@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -89,7 +89,7 @@ export default function ReputationPage() {
   const { data: stats } = useQuery<Stats>({
     queryKey: ["reputation-stats"],
     queryFn: () =>
-      fetch(`${API_URL}/reputation/stats`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/reputation/stats`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : null
       ),
   });
@@ -97,14 +97,14 @@ export default function ReputationPage() {
   const { data: requests = [], isLoading } = useQuery<ReviewRequest[]>({
     queryKey: ["reputation"],
     queryFn: () =>
-      fetch(`${API_URL}/reputation`, { headers: apiHeaders }).then((r) =>
+      fetch(`${API_URL}/reputation`, { headers: getApiHeaders() }).then((r) =>
         r.ok ? r.json() : []
       ),
   });
 
   const sendMutation = useMutation({
     mutationFn: (id: string) =>
-      fetch(`${API_URL}/reputation/${id}/send`, { method: "POST", headers: apiHeaders }),
+      fetch(`${API_URL}/reputation/${id}/send`, { method: "POST", headers: getApiHeaders() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reputation"] });
       queryClient.invalidateQueries({ queryKey: ["reputation-stats"] });
@@ -115,7 +115,7 @@ export default function ReputationPage() {
     mutationFn: ({ id, rating, comment }: { id: string; rating: number; comment: string }) =>
       fetch(`${API_URL}/reputation/${id}/complete`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ rating, comment }),
       }),
     onSuccess: () => {
@@ -129,7 +129,7 @@ export default function ReputationPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      fetch(`${API_URL}/reputation/${id}`, { method: "DELETE", headers: apiHeaders }),
+      fetch(`${API_URL}/reputation/${id}`, { method: "DELETE", headers: getApiHeaders() }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reputation"] });
       queryClient.invalidateQueries({ queryKey: ["reputation-stats"] });

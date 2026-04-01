@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 
 interface Call {
   id: string;
@@ -19,7 +19,7 @@ export function CallsSection({ contactId }: { contactId: string }) {
     queryKey: ["calls", contactId],
     queryFn: () =>
       fetch(`${API_URL}/calls?contactId=${contactId}`, {
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       }).then((r) => (r.ok ? r.json() : [])),
   });
 

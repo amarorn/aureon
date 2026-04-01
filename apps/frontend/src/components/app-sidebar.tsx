@@ -21,7 +21,10 @@ import {
   Sparkles,
   PanelLeftClose,
   TrendingUp,
+  ShieldCheck,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
@@ -87,6 +90,25 @@ export function AppSidebar({
   onMobileClose,
 }: AppSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const adminNav =
+    user?.isPlatformUser === true
+      ? [
+          {
+            label: "Aureon",
+            items: [
+              {
+                href: "/app/admin/access-requests",
+                label: "Cadastros",
+                icon: ShieldCheck,
+                exact: false,
+              },
+            ],
+          },
+        ]
+      : [];
 
   return (
     <>
@@ -129,7 +151,7 @@ export function AppSidebar({
 
         {/* Navigation */}
         <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-4">
-          {navGroups.map((group) => (
+          {[...navGroups, ...adminNav].map((group) => (
             <div key={group.label}>
               {!collapsed && (
                 <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -138,7 +160,15 @@ export function AppSidebar({
               )}
               <div className="space-y-0.5">
                 {group.items.map((item) => {
-                  const hasChildren = "children" in item && item.children?.length;
+                  const hasChildren =
+                    "children" in item &&
+                    Array.isArray(
+                      (item as { children?: { href: string; label: string }[] }).children,
+                    ) &&
+                    (
+                      (item as { children: { href: string; label: string }[] }).children
+                        ?.length ?? 0
+                    ) > 0;
                   const { href, label, icon: Icon, exact } = item;
                   const isActive = exact
                     ? pathname === href
@@ -172,9 +202,13 @@ export function AppSidebar({
                             )}
                           />
                         </Link>
-                        {isExpanded && item.children && (
+                        {isExpanded && hasChildren && (
                           <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-4">
-                            {item.children.map((child) => {
+                            {(
+                              item as {
+                                children: { href: string; label: string }[];
+                              }
+                            ).children.map((child) => {
                               const childActive = pathname === child.href || pathname.startsWith(child.href + "/");
                               return (
                                 <Link
@@ -261,8 +295,12 @@ export function AppSidebar({
               </button>
             )}
           </div>
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              router.push("/login");
+            }}
             className={cn(
               "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive",
               collapsed && "justify-center px-0"
@@ -271,7 +309,7 @@ export function AppSidebar({
           >
             <LogOut className="size-4 shrink-0" />
             {!collapsed && <span>Sair</span>}
-          </Link>
+          </button>
         </div>
       </aside>
     </>

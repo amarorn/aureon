@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { apiHeaders, API_URL } from "@/lib/api";
+import { getApiHeaders, API_URL } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
   Puzzle,
@@ -529,7 +529,7 @@ function OAuthCard({
           : { clientId: idTrim, clientSecret: secretTrim };
       const res = await fetch(`${API_URL}/integrations/oauth-credentials`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ [creds.bodyKey]: block }),
       });
       if (res.ok) {
@@ -715,7 +715,7 @@ function ApiKeyCard({
   const [cardMsg, setCardMsg] = useState<CardMessage | null>(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/integrations/${provider.statusEndpoint}`, { headers: apiHeaders })
+    fetch(`${API_URL}/integrations/${provider.statusEndpoint}`, { headers: getApiHeaders() })
       .then((r) => (r.ok ? r.json() : { connected: false }))
       .then((d) => setConnected(Boolean(d.connected)))
       .catch(() => setConnected(false));
@@ -728,7 +728,7 @@ function ApiKeyCard({
     try {
       const res = await fetch(`${API_URL}/integrations/${provider.configEndpoint}`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify(values),
       });
       if (res.ok) {
@@ -874,7 +874,7 @@ function RdStationOperationsCard({
     }
 
     setLoadingSegmentations(true);
-    fetch(`${API_URL}/integrations/rd-station/segmentations`, { headers: apiHeaders })
+    fetch(`${API_URL}/integrations/rd-station/segmentations`, { headers: getApiHeaders() })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -908,7 +908,7 @@ function RdStationOperationsCard({
     try {
       const res = await fetch(`${API_URL}/integrations/rd-station/sync-segmentation`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({ segmentationId: selectedSegmentationId, limit: 100 }),
       });
       const data = await res.json().catch(() => ({}));
@@ -1089,7 +1089,7 @@ function LinkedInLeadGenCard({
     if (!isConnected) return;
 
     setLoadingConfig(true);
-    fetch(`${API_URL}/integrations/linkedin/leadgen-config`, { headers: apiHeaders })
+    fetch(`${API_URL}/integrations/linkedin/leadgen-config`, { headers: getApiHeaders() })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -1127,7 +1127,7 @@ function LinkedInLeadGenCard({
     try {
       const res = await fetch(`${API_URL}/integrations/linkedin/leadgen-config`, {
         method: "PUT",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({
           ownerUrn: ownerUrn.trim(),
           leadType,
@@ -1162,7 +1162,7 @@ function LinkedInLeadGenCard({
     try {
       const res = await fetch(`${API_URL}/integrations/linkedin/sync-leadgen-batch`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
         body: JSON.stringify({
           ownerUrn: ownerUrn.trim(),
           leadType,
@@ -1370,7 +1370,7 @@ function IntegrationsContent() {
   }, [errorParam, successParam]);
 
   useEffect(() => {
-    fetch(`${API_URL}/integrations`, { headers: apiHeaders })
+    fetch(`${API_URL}/integrations`, { headers: getApiHeaders() })
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setIntegrations(Array.isArray(data) ? data : []))
       .catch(() => setIntegrations([]))
@@ -1379,7 +1379,7 @@ function IntegrationsContent() {
 
   async function handleOAuthConnect(provider: OAuthProviderId) {
     try {
-      const res = await fetch(`${API_URL}/integrations/oauth/url/${provider}`, { headers: apiHeaders });
+      const res = await fetch(`${API_URL}/integrations/oauth/url/${provider}`, { headers: getApiHeaders() });
       const data = await res.json();
       if (res.ok && data?.url) window.location.assign(data.url);
       else setMessage({ type: "error", text: (data as { message?: string })?.message ?? "Integração não configurada." });
@@ -1392,7 +1392,7 @@ function IntegrationsContent() {
     try {
       const res = await fetch(`${API_URL}/integrations/${id}/disconnect`, {
         method: "POST",
-        headers: apiHeaders,
+        headers: getApiHeaders(),
       });
       if (res.ok) {
         setIntegrations((prev) => prev.map((i) => (i.id === id ? { ...i, status: "disconnected" } : i)));
