@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -16,6 +17,8 @@ import { Tenant } from '../tenant/tenant.entity';
 import { TenantAccessRequest } from './entities/tenant-access-request.entity';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import {
   AccessRequestStatus,
   TenantApprovalStatus,
@@ -485,5 +488,30 @@ export class AuthService {
 
   async findUserById(id: string): Promise<User | null> {
     return this.userRepo.findOne({ where: { id }, relations: ['tenant'] });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    const name = dto.name.trim();
+    if (!name) throw new BadRequestException('Nome inválido');
+    user.name = name;
+    await this.userRepo.save(user);
+    return { user: this.toPublicUser(user) };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    if (!(await bcrypt.compare(dto.currentPassword, user.passwordHash))) {
+      throw new BadRequestException('Senha atual incorreta');
+    }
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException('A nova senha deve ser diferente da atual');
+    }
+    user.passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+    await this.userRepo.save(user);
+    await this.sessionRepo.delete({ userId: user.id });
+    return { ok: true };
   }
 }

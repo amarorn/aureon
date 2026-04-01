@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Patch,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -11,6 +13,8 @@ import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { RequireAuthGuard } from './require-auth.guard';
 
 @Controller('auth')
@@ -51,6 +55,24 @@ export class AuthController {
     const headerTenantId =
       typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
     return this.auth.getMe(req.userJwt.sub, { headerTenantId });
+  }
+
+  @Patch('me')
+  @UseGuards(RequireAuthGuard)
+  updateMe(
+    @Req() req: Request & { userJwt: { sub: string } },
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.auth.updateProfile(req.userJwt.sub, dto);
+  }
+
+  @Put('me/password')
+  @UseGuards(RequireAuthGuard)
+  changeMyPassword(
+    @Req() req: Request & { userJwt: { sub: string } },
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.auth.changePassword(req.userJwt.sub, dto);
   }
 
   @Get('packages')

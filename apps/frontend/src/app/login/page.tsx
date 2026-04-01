@@ -67,6 +67,7 @@ export default function LoginPage() {
   const [code, setCode] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [flash, setFlash] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) router.replace("/app");
@@ -77,6 +78,21 @@ export default function LoginPage() {
     return () => clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem("aureon_login_notice");
+      if (!raw) return;
+      sessionStorage.removeItem("aureon_login_notice");
+      const j = JSON.parse(raw) as { type?: string };
+      if (j.type === "password_ok") {
+        setFlash("Senha alterada. Entre novamente com a nova senha.");
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const leads = useCounter(284, 2000, 400);
   const deals = useCounter(48, 1500, 600);
   const revenue = useCounter(42, 2200, 200);
@@ -85,6 +101,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setCode(null);
+    setFlash(null);
     setPending(true);
     try {
       await login(email, password);
@@ -763,6 +780,23 @@ export default function LoginPage() {
                 onBlur={handleBlur}
               />
             </div>
+
+            {flash && (
+              <div
+                style={{
+                  padding: "10px 14px",
+                  background: "oklch(0.72 0.14 160 / 10%)",
+                  border: "1px solid oklch(0.72 0.14 160 / 30%)",
+                  borderRadius: 11,
+                  fontSize: 13,
+                  color: "oklch(0.82 0.12 160)",
+                  fontWeight: 500,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                {flash}
+              </div>
+            )}
 
             {/* Error */}
             {error && (

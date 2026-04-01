@@ -72,7 +72,7 @@ export function UserMenu() {
             </p>
           </div>
           <Link
-            href="/app"
+            href="/app/profile"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2 px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             role="menuitem"
@@ -81,7 +81,7 @@ export function UserMenu() {
             Perfil
           </Link>
           <Link
-            href="/app"
+            href="/app/settings"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2 px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             role="menuitem"

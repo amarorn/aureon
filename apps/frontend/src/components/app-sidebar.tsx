@@ -11,6 +11,7 @@ import {
   Package,
   ChevronDown,
   Building2,
+  UserCog,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { filterNavByFeatures, mainNavGroups } from "@/lib/nav-config";
@@ -74,6 +75,12 @@ export function AppSidebar({
                 icon: Building2,
                 exact: false,
               },
+              {
+                href: "/app/admin/users",
+                label: "Usuários",
+                icon: UserCog,
+                exact: false,
+              },
             ],
           },
         ]
@@ -93,7 +100,7 @@ export function AppSidebar({
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-border bg-sidebar transition-all duration-300 ease-in-out lg:relative lg:z-auto",
-          collapsed ? "w-16" : "w-56",
+          collapsed ? "w-14" : "w-52",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
@@ -101,33 +108,33 @@ export function AppSidebar({
         <Link
           href="/app"
           onClick={onMobileClose}
-          className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-3 hover:bg-sidebar-accent/50 transition-colors"
+          className="flex h-12 shrink-0 items-center gap-2.5 border-b border-border px-3 hover:bg-sidebar-accent/50 transition-colors"
         >
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl gradient-primary glow-primary-sm">
-            <Sparkles className="size-4 text-white" />
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg gradient-primary glow-primary-sm">
+            <Sparkles className="size-3.5 text-white" />
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1 overflow-hidden">
               <span className="block truncate text-sm font-bold tracking-tight gradient-text">
                 Aureon
               </span>
-              <span className="block truncate text-[10px] text-muted-foreground">
+              <span className="block truncate text-[9px] text-muted-foreground leading-tight">
                 CRM & Automação
               </span>
             </div>
           )}
         </Link>
 
-        {/* Navigation */}
-        <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-4">
+        {/* Navigation — no overflow-y-auto so it never scrolls */}
+        <nav className="flex-1 min-h-0 px-1.5 py-2 space-y-2">
           {[...navGroups, ...adminNav].map((group) => (
             <div key={group.label}>
               {!collapsed && (
-                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="mb-0.5 px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                   {group.label}
                 </p>
               )}
-              <div className="space-y-0.5">
+              <div className="space-y-px">
                 {group.items.map((item) => {
                   const hasChildren =
                     "children" in item &&
@@ -151,9 +158,9 @@ export function AppSidebar({
                           href={href}
                           onClick={onMobileClose}
                           className={cn(
-                            "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                            "group flex items-center gap-2.5 rounded-md px-2 py-[5px] text-sm font-medium transition-all duration-150",
                             isActive
-                              ? "bg-primary/15 text-primary shadow-sm"
+                              ? "bg-primary/15 text-primary"
                               : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                           )}
                         >
@@ -166,13 +173,13 @@ export function AppSidebar({
                           <span className="flex-1 truncate">{label}</span>
                           <ChevronDown
                             className={cn(
-                              "size-4 shrink-0 transition-transform duration-200",
+                              "size-3.5 shrink-0 transition-transform duration-200",
                               isExpanded && "rotate-180"
                             )}
                           />
                         </Link>
                         {isExpanded && hasChildren && (
-                          <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-4">
+                          <div className="ml-3 mt-px space-y-px border-l border-border pl-3">
                             {(
                               item as {
                                 children: { href: string; label: string }[];
@@ -185,7 +192,7 @@ export function AppSidebar({
                                   href={child.href}
                                   onClick={onMobileClose}
                                   className={cn(
-                                    "flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors",
+                                    "flex items-center gap-2 rounded-md px-2 py-1 text-xs font-medium transition-colors",
                                     childActive
                                       ? "text-primary"
                                       : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -207,10 +214,10 @@ export function AppSidebar({
                       href={href}
                       onClick={onMobileClose}
                       className={cn(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                        "group flex items-center gap-2.5 rounded-md px-2 py-[5px] text-sm font-medium transition-all duration-150",
                         collapsed && "justify-center px-0",
                         isActive
-                          ? "bg-primary/15 text-primary shadow-sm"
+                          ? "bg-primary/15 text-primary"
                           : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       )}
                       title={collapsed ? label : undefined}
@@ -238,26 +245,26 @@ export function AppSidebar({
         </nav>
 
         {/* Footer */}
-        <div className={cn("shrink-0 border-t border-border p-2 space-y-1", collapsed && "flex flex-col items-center gap-1")}>
+        <div className={cn("shrink-0 border-t border-border px-1.5 py-1.5 space-y-px", collapsed && "flex flex-col items-center gap-1")}>
           {!collapsed && (
-            <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
+            <div className="flex items-center gap-2 rounded-md px-2 py-1.5">
               <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
                 <span className="text-xs font-bold">{avatarLetter}</span>
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
-                <p className="truncate text-xs font-medium text-foreground">{displayName}</p>
-                <p className="truncate text-[10px] text-muted-foreground" title={user?.email ?? ""}>
+                <p className="truncate text-xs font-semibold text-foreground leading-tight">{displayName}</p>
+                <p className="truncate text-[10px] text-muted-foreground leading-tight" title={user?.email ?? ""}>
                   {displaySubtitle}
                 </p>
               </div>
             </div>
           )}
-          <div className={cn("flex items-center gap-1", !collapsed && "justify-between")}>
+          <div className={cn("flex items-center gap-1", !collapsed && "justify-between px-1")}>
             <ThemeToggle />
             {onCollapse && (
               <button
                 onClick={onCollapse}
-                className="hidden size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground lg:flex"
+                className="hidden size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground lg:flex"
                 aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
               >
                 <PanelLeftClose
@@ -273,7 +280,7 @@ export function AppSidebar({
               router.push("/login");
             }}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive",
+              "flex w-full items-center gap-2.5 rounded-md px-2 py-[5px] text-sm font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive",
               collapsed && "justify-center px-0"
             )}
             title={collapsed ? "Sair" : undefined}

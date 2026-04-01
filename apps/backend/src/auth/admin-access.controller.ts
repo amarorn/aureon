@@ -20,6 +20,7 @@ import { AdminTenantPackageDto } from './dto/admin-tenant-package.dto';
 import { AdminTenantFeaturesDto } from './dto/admin-tenant-features.dto';
 import { AdminUpdatePackageDto } from './dto/admin-update-package.dto';
 import { AdminCreatePackageDto } from './dto/admin-create-package.dto';
+import { AdminUserStatusDto } from './dto/admin-user-status.dto';
 import type { Request } from 'express';
 
 @Controller('admin')
@@ -89,6 +90,32 @@ export class AdminAccessController {
     @Req() req: Request & { userJwt: { sub: string } },
   ) {
     return this.admin.updatePackagePlan(code, dto, req.userJwt.sub);
+  }
+
+  @Get('users')
+  listUsers() {
+    return this.admin.listUsersForAdmin();
+  }
+
+  @Put('users/:id/status')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  setUserStatus(
+    @Param('id') id: string,
+    @Body() dto: AdminUserStatusDto,
+    @Req() req: Request & { userJwt: { sub: string } },
+  ) {
+    return this.admin.setUserStatusAdmin(id, dto, req.userJwt.sub);
+  }
+
+  @Post('users/:id/reset-password')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  resetUserPassword(
+    @Param('id') id: string,
+    @Req() req: Request & { userJwt: { sub: string } },
+  ) {
+    return this.admin.resetUserPasswordAdmin(id, req.userJwt.sub);
   }
 
   @Get('tenants')

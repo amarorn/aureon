@@ -3,12 +3,16 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { TenantAccessRequest } from './entities/tenant-access-request.entity';
 import { Tenant } from '../tenant/tenant.entity';
 import { User } from './entities/user.entity';
+import { AuthSession } from './entities/auth-session.entity';
 import { TenantSubscription } from './entities/tenant-subscription.entity';
 import { TenantFeatureFlag } from './entities/tenant-feature-flag.entity';
 import { PackagePlan } from './entities/package-plan.entity';
@@ -30,8 +34,11 @@ import { AdminTenantPackageDto } from './dto/admin-tenant-package.dto';
 import { AdminTenantFeaturesDto } from './dto/admin-tenant-features.dto';
 import { AdminUpdatePackageDto } from './dto/admin-update-package.dto';
 import { AdminCreatePackageDto } from './dto/admin-create-package.dto';
+import { AdminUserStatusDto } from './dto/admin-user-status.dto';
 import { FeaturesService } from './features.service';
 import { PackagePlansService } from './package-plans.service';
+
+const BCRYPT_ROUNDS = 12;
 
 @Injectable()
 export class AdminAccessService {
@@ -42,6 +49,8 @@ export class AdminAccessService {
     private readonly tenantRepo: Repository<Tenant>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(AuthSession)
+    private readonly sessionRepo: Repository<AuthSession>,
     @InjectRepository(TenantSubscription)
     private readonly subRepo: Repository<TenantSubscription>,
     @InjectRepository(TenantFeatureFlag)
@@ -52,6 +61,84 @@ export class AdminAccessService {
     private readonly features: FeaturesService,
     private readonly packagePlans: PackagePlansService,
   ) {}
+
+  async listUsersForAdmin() {
+    const users = await this.userRepo.find({
+      relations: ['tenant'],
+      order: { createdAt: 'DESC' },
+      take: 2000,
+    });
+    return users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      status: u.status,
+      isPlatformUser: u.isPlatformUser,
+      tenantId: u.tenantId,
+      tenantName: u.tenant?.name ?? null,
+      tenantSlug: u.tenant?.slug ?? null,
+      currentPackageCode: u.tenant?.currentPackageCode ?? null,
+      lastLoginAt: u.lastLoginAt,
+      createdAt: u.createdAt,
+    }));
+  }
+
+  async setUserStatusAdmin(
+    userId: string,
+    dto: AdminUserStatusDto,
+    actorUserId: string,
+  ) {
+    if (userId === actorUserId) {
+      throw new BadRequestException('Não é possível alterar o próprio status aqui');
+    }
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    if (user.isPlatformUser) {
+      throw new ForbiddenException(
+        'Contas da equipe Aureon não são geridas nesta lista',
+      );
+    }
+    const next =
+      dto.status === 'blocked' ? UserStatus.BLOCKED : UserStatus.ACTIVE;
+    user.status = next;
+    await this.userRepo.save(user);
+    await this.audit.log({
+      actorUserId,
+      tenantId: user.tenantId,
+      action: 'user.status_change',
+      entityType: 'user',
+      entityId: userId,
+      metadata: { status: next },
+    });
+    return { ok: true };
+  }
+
+  async resetUserPasswordAdmin(userId: string, actorUserId: string) {
+    if (userId === actorUserId) {
+      throw new BadRequestException('Use outro meio para alterar a sua senha');
+    }
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    if (user.isPlatformUser) {
+      throw new ForbiddenException(
+        'Redefinição por esta tela não se aplica à equipe Aureon',
+      );
+    }
+    const temporaryPassword = randomBytes(14).toString('base64url').slice(0, 20);
+    user.passwordHash = await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS);
+    await this.userRepo.save(user);
+    await this.sessionRepo.delete({ userId: user.id });
+    await this.audit.log({
+      actorUserId,
+      tenantId: user.tenantId,
+      action: 'user.password_reset',
+      entityType: 'user',
+      entityId: userId,
+      metadata: {},
+    });
+    return { ok: true, temporaryPassword };
+  }
 
   async listPackagePlans() {
     return this.packagePlans.listPlansOrdered();
