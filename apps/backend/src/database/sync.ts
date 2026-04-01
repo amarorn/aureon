@@ -40,6 +40,7 @@ import { User } from '../auth/entities/user.entity';
 import { AuthSession } from '../auth/entities/auth-session.entity';
 import { TenantSubscription } from '../auth/entities/tenant-subscription.entity';
 import { TenantFeatureFlag } from '../auth/entities/tenant-feature-flag.entity';
+import { PackagePlan } from '../auth/entities/package-plan.entity';
 import { TenantAccessRequest } from '../auth/entities/tenant-access-request.entity';
 import { AuditLog } from '../auth/entities/audit-log.entity';
 
@@ -49,6 +50,7 @@ const entities = [
   AuthSession,
   TenantSubscription,
   TenantFeatureFlag,
+  PackagePlan,
   TenantAccessRequest,
   AuditLog,
   Contact,

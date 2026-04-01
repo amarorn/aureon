@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TenantFeatureFlag } from './entities/tenant-feature-flag.entity';
+import { PackagePlan } from './entities/package-plan.entity';
 import { Tenant } from '../tenant/tenant.entity';
 import {
   FeatureFlagSource,
@@ -20,17 +21,26 @@ export class FeaturesService {
     private readonly flagRepo: Repository<TenantFeatureFlag>,
     @InjectRepository(Tenant)
     private readonly tenantRepo: Repository<Tenant>,
+    @InjectRepository(PackagePlan)
+    private readonly packagePlanRepo: Repository<PackagePlan>,
   ) {}
 
   async getEffectiveFeatureCodes(tenantId: string): Promise<Set<string>> {
     const tenant = await this.tenantRepo.findOne({ where: { id: tenantId } });
     const set = new Set<string>();
-    if (
-      tenant?.currentPackageCode &&
-      isValidPackageCode(tenant.currentPackageCode)
-    ) {
-      for (const f of featuresForPackage(tenant.currentPackageCode as PackageCode)) {
-        set.add(f);
+    const pkgCode = tenant?.currentPackageCode ?? null;
+    if (pkgCode) {
+      const planRow = await this.packagePlanRepo.findOne({
+        where: { code: pkgCode },
+      });
+      if (planRow?.featureCodes?.length) {
+        for (const f of planRow.featureCodes) {
+          set.add(f);
+        }
+      } else if (isValidPackageCode(pkgCode)) {
+        for (const f of featuresForPackage(pkgCode as PackageCode)) {
+          set.add(f);
+        }
       }
     }
     const overrides = await this.flagRepo.find({ where: { tenantId } });

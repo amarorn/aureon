@@ -1,4 +1,10 @@
-import { IsArray, IsBoolean, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class FeatureOverrideItem {
@@ -10,8 +16,14 @@ class FeatureOverrideItem {
 }
 
 export class AdminTenantFeaturesDto {
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  revertToPackageDefaults?: string[];
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => FeatureOverrideItem)
-  overrides: FeatureOverrideItem[];
+  overrides?: FeatureOverrideItem[];
 }

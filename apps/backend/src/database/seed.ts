@@ -1,7 +1,10 @@
 import { config } from 'dotenv';
 import { resolve } from 'path';
-config({ path: resolve(process.cwd(), '.env') });
-config({ path: resolve(process.cwd(), '../.env') });
+
+const backendRoot = resolve(__dirname, '../..');
+const repoRoot = resolve(__dirname, '../../../..');
+config({ path: resolve(repoRoot, '.env') });
+config({ path: resolve(backendRoot, '.env'), override: true });
 
 import { DataSource } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -89,12 +92,41 @@ async function seed() {
 
   const adminEmail = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
   const adminPassword = process.env.PLATFORM_ADMIN_PASSWORD;
-  if (adminEmail && adminPassword) {
+  if (!adminEmail || !adminPassword) {
+    console.log(
+      'PLATFORM_ADMIN_EMAIL / PLATFORM_ADMIN_PASSWORD ausentes no .env; admin da plataforma não alterado.',
+    );
+  } else {
     const userRepo = ds.getRepository(User);
     const existingAdmin = await userRepo.findOne({
       where: { email: adminEmail },
     });
-    if (!existingAdmin) {
+    if (existingAdmin) {
+      if (
+        existingAdmin.isPlatformUser &&
+        existingAdmin.role === UserRole.PLATFORM_ADMIN
+      ) {
+        const matches = await bcrypt.compare(
+          adminPassword,
+          existingAdmin.passwordHash,
+        );
+        if (!matches) {
+          existingAdmin.passwordHash = await bcrypt.hash(adminPassword, 12);
+          await userRepo.save(existingAdmin);
+          console.log(
+            'Senha do platform_admin atualizada a partir do .env:',
+            adminEmail,
+          );
+        } else {
+          console.log('platform_admin já existe (senha confere com .env):', adminEmail);
+        }
+      } else {
+        console.log(
+          'Já existe usuário com este e-mail, mas não é platform_admin; não alterado:',
+          adminEmail,
+        );
+      }
+    } else {
       let internal = await tenantRepo.findOne({ where: { slug: 'aureon-internal' } });
       if (!internal) {
         internal = tenantRepo.create({

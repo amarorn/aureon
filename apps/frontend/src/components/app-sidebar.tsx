@@ -22,6 +22,7 @@ import {
   PanelLeftClose,
   TrendingUp,
   ShieldCheck,
+  Package,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
@@ -91,7 +92,17 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, tenant, logout } = useAuth();
+
+  const displayName = user?.name?.trim() || user?.email || "Usuário";
+  const displaySubtitle = user?.isPlatformUser
+    ? user.role === "platform_admin"
+      ? "Administrador da plataforma"
+      : user.role === "platform_support"
+        ? "Suporte Aureon"
+        : "Equipe Aureon"
+    : tenant?.name ?? tenant?.slug ?? user?.email ?? "";
+  const avatarLetter = (displayName || "?").charAt(0).toUpperCase();
 
   const adminNav =
     user?.isPlatformUser === true
@@ -103,6 +114,18 @@ export function AppSidebar({
                 href: "/app/admin/access-requests",
                 label: "Cadastros",
                 icon: ShieldCheck,
+                exact: false,
+              },
+              {
+                href: "/app/admin/planos",
+                label: "Planos",
+                icon: Package,
+                exact: false,
+              },
+              {
+                href: "/app/admin/tenants",
+                label: "Organizações",
+                icon: Building2,
                 exact: false,
               },
             ],
@@ -273,11 +296,13 @@ export function AppSidebar({
           {!collapsed && (
             <div className="flex items-center gap-2 rounded-lg px-2 py-1.5">
               <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary">
-                <span className="text-xs font-bold">A</span>
+                <span className="text-xs font-bold">{avatarLetter}</span>
               </div>
               <div className="min-w-0 flex-1 overflow-hidden">
-                <p className="truncate text-xs font-medium text-foreground">Admin</p>
-                <p className="truncate text-[10px] text-muted-foreground">aureon.app</p>
+                <p className="truncate text-xs font-medium text-foreground">{displayName}</p>
+                <p className="truncate text-[10px] text-muted-foreground" title={user?.email ?? ""}>
+                  {displaySubtitle}
+                </p>
               </div>
             </div>
           )}

@@ -6,15 +6,19 @@ import {
   Post,
   Put,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { RequireAuthGuard } from './require-auth.guard';
 import { PlatformStaffGuard } from './platform-roles.guard';
+import { RolesGuard } from './roles.guard';
+import { Roles } from './roles.decorator';
+import { UserRole } from './auth.types';
 import { AdminAccessService } from './admin-access.service';
 import { ApproveAccessRequestDto } from './dto/approve-access-request.dto';
 import { RejectAccessRequestDto } from './dto/reject-access-request.dto';
 import { AdminTenantPackageDto } from './dto/admin-tenant-package.dto';
 import { AdminTenantFeaturesDto } from './dto/admin-tenant-features.dto';
-import { Req } from '@nestjs/common';
+import { AdminUpdatePackageDto } from './dto/admin-update-package.dto';
 import type { Request } from 'express';
 
 @Controller('admin')
@@ -53,6 +57,27 @@ export class AdminAccessController {
     @Req() req: Request & { userJwt: { sub: string } },
   ) {
     return this.admin.reject(id, dto, req.userJwt.sub);
+  }
+
+  @Get('feature-registry')
+  featureRegistry() {
+    return this.admin.featureRegistry();
+  }
+
+  @Get('packages')
+  listPackages() {
+    return this.admin.listPackagePlans();
+  }
+
+  @Put('packages/:code')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.PLATFORM_ADMIN)
+  updatePackage(
+    @Param('code') code: string,
+    @Body() dto: AdminUpdatePackageDto,
+    @Req() req: Request & { userJwt: { sub: string } },
+  ) {
+    return this.admin.updatePackagePlan(code, dto, req.userJwt.sub);
   }
 
   @Get('tenants')

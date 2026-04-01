@@ -11,6 +11,7 @@ import { AuthSession } from './entities/auth-session.entity';
 import { TenantAccessRequest } from './entities/tenant-access-request.entity';
 import { TenantSubscription } from './entities/tenant-subscription.entity';
 import { TenantFeatureFlag } from './entities/tenant-feature-flag.entity';
+import { PackagePlan } from './entities/package-plan.entity';
 import { AuditLog } from './entities/audit-log.entity';
 import { Tenant } from '../tenant/tenant.entity';
 import { FeaturesService } from './features.service';
@@ -33,17 +34,20 @@ import { RequireAuthGuard } from './require-auth.guard';
       TenantAccessRequest,
       TenantSubscription,
       TenantFeatureFlag,
+      PackagePlan,
       AuditLog,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>(
-          'JWT_SECRET',
-          'dev-jwt-secret-change-in-production',
-        ),
-        signOptions: { expiresIn: '15m' },
-      }),
+      useFactory: (config: ConfigService) => {
+        const raw = config.get<string>('JWT_SECRET');
+        const secret =
+          raw?.trim() || 'dev-jwt-secret-change-in-production';
+        return {
+          secret,
+          signOptions: { expiresIn: '15m' },
+        };
+      },
       inject: [ConfigService],
     }),
   ],
