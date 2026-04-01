@@ -17,6 +17,10 @@ export const FEATURE_REGISTRY: Record<
   'integrations.core': { label: 'Integrações', group: 'Sistema' },
   'business.google': { label: 'Google Business Profile', group: 'Marketing' },
   'ads.tiktok': { label: 'TikTok Ads', group: 'Marketing' },
+  'ai.assistant': {
+    label: 'Assistente IA no produto (add-on)',
+    group: 'Inteligência artificial',
+  },
 };
 
 export function isKnownFeatureCode(code: string): boolean {

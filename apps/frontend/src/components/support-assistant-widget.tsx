@@ -17,6 +17,7 @@ import {
   User,
 } from "lucide-react";
 import { API_URL, TENANT_ID, getApiHeaders } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/assistant/types";
 import { resolveSupportRouteContext } from "@/lib/support/route-context";
@@ -162,7 +163,10 @@ function Bubble({
   );
 }
 
+const AI_ASSISTANT_FEATURE = "ai.assistant";
+
 export function SupportAssistantWidget() {
+  const { hasFeature } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const routeContext = useMemo(
@@ -313,9 +317,18 @@ export function SupportAssistantWidget() {
           messages: history,
         };
 
+        const apiHeaders = getApiHeaders();
         const res = await fetch("/api/support-chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(apiHeaders.Authorization
+              ? { Authorization: apiHeaders.Authorization }
+              : {}),
+            ...(apiHeaders["X-Tenant-Id"]
+              ? { "X-Tenant-Id": apiHeaders["X-Tenant-Id"] }
+              : {}),
+          },
           body: JSON.stringify(payload),
         });
 
@@ -437,6 +450,10 @@ export function SupportAssistantWidget() {
   };
 
   const hasSpoken = messages.length > 1;
+
+  if (!hasFeature(AI_ASSISTANT_FEATURE)) {
+    return null;
+  }
 
   return (
     <>

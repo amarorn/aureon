@@ -8,12 +8,68 @@ import type { SupportChatRequestBody } from "@/lib/support/types";
 
 export const runtime = "nodejs";
 
+const AI_ASSISTANT_FEATURE = "ai.assistant";
+
 function toSsePayload(payload: unknown) {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
+async function verifyAiAssistantAccess(
+  req: NextRequest,
+): Promise<Response | null> {
+  const auth = req.headers.get("authorization");
+  if (!auth?.startsWith("Bearer ")) {
+    return new Response(
+      JSON.stringify({
+        error: "Autenticação necessária para o assistente IA.",
+      }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  const apiBase = (
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:3001/api/v1"
+  ).replace(/\/$/, "");
+  const tenantHeader = req.headers.get("x-tenant-id");
+  const meHeaders: Record<string, string> = { Authorization: auth };
+  if (tenantHeader?.trim()) {
+    meHeaders["X-Tenant-Id"] = tenantHeader.trim();
+  }
+  const me = await fetch(`${apiBase}/auth/me`, { headers: meHeaders });
+  if (!me.ok) {
+    return new Response(JSON.stringify({ error: "Sessão inválida." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const data = (await me.json()) as {
+    user?: { isPlatformUser?: boolean };
+    features?: string[];
+  };
+  const impersonating = Boolean(tenantHeader?.trim());
+  if (data.user?.isPlatformUser === true && !impersonating) {
+    return null;
+  }
+  if (!data.features?.includes(AI_ASSISTANT_FEATURE)) {
+    return new Response(
+      JSON.stringify({
+        error:
+          "Assistente IA não está no plano. Contrate o add-on ou solicite liberação ao administrador.",
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
+    const authError = await verifyAiAssistantAccess(req);
+    if (authError) {
+      return authError;
+    }
+
     const { messages, currentPath, runtimeContext }: SupportChatRequestBody =
       await req.json();
 
