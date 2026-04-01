@@ -154,6 +154,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void refreshSession();
   }, [refreshSession]);
 
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      if (t) clearTimeout(t);
+      t = setTimeout(() => {
+        void refreshSession();
+      }, 500);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      if (t) clearTimeout(t);
+    };
+  }, [refreshSession]);
+
   const login = useCallback(
     async (email: string, password: string) => {
       const res = await fetch(`${API_URL}/auth/login`, {
@@ -196,7 +212,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasFeature = useCallback(
     (code: string) => {
-      if (session?.user?.isPlatformUser) return true;
+      const u = session?.user;
+      if (!u) return false;
+      if (u.isPlatformUser) {
+        if (typeof window !== "undefined" && getImpersonatedTenantId()) {
+          return (session?.features ?? []).includes(code);
+        }
+        return true;
+      }
       return (session?.features ?? []).includes(code);
     },
     [session],

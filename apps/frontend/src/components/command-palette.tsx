@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -15,23 +15,38 @@ import {
   Star,
   FileCheck,
   Search,
+  BarChart3,
+  Megaphone,
+  TrendingUp,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 
 const searchItems = [
   { href: "/app", label: "Dashboard", icon: LayoutDashboard, keywords: "inicio" },
-  { href: "/app/contacts", label: "Contatos", icon: Users, keywords: "pessoas" },
-  { href: "/app/opportunities", label: "Oportunidades", icon: Kanban, keywords: "vendas pipeline" },
-  { href: "/app/inbox", label: "Inbox", icon: MessageSquare, keywords: "mensagens conversas" },
-  { href: "/app/inbox/channels", label: "Canais", icon: MessageSquare, keywords: "inbox" },
-  { href: "/app/inbox/templates", label: "Templates", icon: MessageSquare, keywords: "inbox" },
-  { href: "/app/telephony", label: "Telefonia", icon: Phone, keywords: "chamadas discador" },
-  { href: "/app/calendar", label: "Calendário", icon: CalendarDays, keywords: "agenda eventos" },
-  { href: "/app/email-marketing", label: "Email Marketing", icon: Mail, keywords: "campanhas" },
-  { href: "/app/reputation", label: "Reputação", icon: Star, keywords: "avaliacoes" },
-  { href: "/app/proposals", label: "Propostas", icon: FileCheck, keywords: "propostas" },
-  { href: "/app/automation", label: "Automação", icon: Zap, keywords: "workflows" },
-  { href: "/app/integrations", label: "Integrações", icon: Plug, keywords: "conexoes" },
+  { href: "/app/contacts", label: "Contatos", icon: Users, keywords: "pessoas", feature: "crm.contacts" },
+  {
+    href: "/app/opportunities",
+    label: "Oportunidades",
+    icon: Kanban,
+    keywords: "vendas pipeline",
+    feature: "crm.opportunities",
+  },
+  { href: "/app/inbox", label: "Inbox", icon: MessageSquare, keywords: "mensagens conversas", feature: "inbox.core" },
+  { href: "/app/inbox/channels", label: "Canais", icon: MessageSquare, keywords: "inbox", feature: "inbox.core" },
+  { href: "/app/inbox/templates", label: "Templates", icon: MessageSquare, keywords: "inbox", feature: "inbox.core" },
+  { href: "/app/telephony", label: "Telefonia", icon: Phone, keywords: "chamadas discador", feature: "telephony.core" },
+  { href: "/app/calendar", label: "Calendário", icon: CalendarDays, keywords: "agenda eventos", feature: "calendar.core" },
+  { href: "/app/email-marketing", label: "Email Marketing", icon: Mail, keywords: "campanhas", feature: "email.marketing" },
+  { href: "/app/reputation", label: "Reputação", icon: Star, keywords: "avaliacoes", feature: "reputation.core" },
+  { href: "/app/proposals", label: "Propostas", icon: FileCheck, keywords: "propostas", feature: "proposals.core" },
+  { href: "/app/automation", label: "Automação", icon: Zap, keywords: "workflows", feature: "automation.core" },
+  { href: "/app/integrations", label: "Integrações", icon: Plug, keywords: "conexoes", feature: "integrations.core" },
+  { href: "/app/analytics/google", label: "Google Analytics", icon: BarChart3, keywords: "ga", feature: "analytics.google" },
+  { href: "/app/ads/google", label: "Google Ads", icon: Megaphone, keywords: "anuncios", feature: "ads.google" },
+  { href: "/app/ads/tiktok", label: "TikTok Ads", icon: TrendingUp, keywords: "tiktok", feature: "ads.tiktok" },
+  { href: "/app/business/google", label: "Business Profile", icon: Building2, keywords: "google business", feature: "business.google" },
 ];
 
 interface CommandPaletteProps {
@@ -40,18 +55,24 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ onClose }: CommandPaletteProps) {
   const router = useRouter();
+  const { hasFeature } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  const visibleItems = useMemo(
+    () => searchItems.filter((item) => !item.feature || hasFeature(item.feature)),
+    [hasFeature],
+  );
+
   const filtered = query.trim()
-    ? searchItems.filter(
+    ? visibleItems.filter(
         (item) =>
           item.label.toLowerCase().includes(query.toLowerCase()) ||
           item.keywords.toLowerCase().includes(query.toLowerCase())
       )
-    : searchItems;
+    : visibleItems;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -128,7 +149,7 @@ export function CommandPalette({ onClose }: CommandPaletteProps) {
           ) : (
             filtered.map((item, index) => (
               <button
-                key={item.href}
+                key={`${item.href}-${item.label}`}
                 type="button"
                 data-index={index}
                 onClick={() => handleSelect(item.href)}
